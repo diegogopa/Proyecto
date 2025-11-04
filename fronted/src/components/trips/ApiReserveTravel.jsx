@@ -122,16 +122,42 @@ function ReserveTrip({ trip, onFinishReservation }) {
     const [step, setStep] = useState('map'); // 'map' o 'confirmation'
     const [pickupAddress, setPickupAddress] = useState('');
 
-    const handleReserveClick = () => {
+    const handleReserveClick = async () => {
         // Validación básica
         if (!pickupAddress || pickupAddress.trim() === '') {
             alert("Por favor, selecciona o escribe una dirección de recogida.");
             return;
         }
 
-        // Aquí iría la lógica de API real (enviar datos, etc.)
-        console.log(`Reservando viaje #${trip.id} con recogida en: ${pickupAddress}`);
-        setStep('confirmation');
+        // Obtener el tripId (puede ser trip.tripId o trip.id)
+        const tripId = trip.tripId || trip.id;
+        if (!tripId) {
+            alert("Error: No se encontró el ID del viaje.");
+            return;
+        }
+
+        try {
+            // Llamar al endpoint para restar 1 cupo
+            const response = await fetch(`https://proyecto5-vs2l.onrender.com/api/trips/${tripId}/reserve`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                alert(errorData.message || 'Error al reservar el cupo. Por favor, intenta nuevamente.');
+                return;
+            }
+
+            // Si todo salió bien, mostrar confirmación
+            console.log(`Reservando viaje #${trip.id} con recogida en: ${pickupAddress}`);
+            setStep('confirmation');
+        } catch (error) {
+            console.error("Error al reservar:", error);
+            alert("Error al realizar la reserva. Por favor, intenta nuevamente.");
+        }
     };
 
     // ✅ Función para actualizar el estado de la dirección cuando el mapa la selecciona

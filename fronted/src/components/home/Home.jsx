@@ -280,6 +280,8 @@ function Home() {
         setIsReserving(false);
         setSelectedTrip(null);
         setActiveTab("home");
+        // Refrescar los trips para mostrar los cupos actualizados
+        // Esto se hace automáticamente cuando activeTab cambia a "home" en el useEffect
     };
 
     // Obtener todos los viajes del backend

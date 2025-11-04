@@ -277,6 +277,57 @@ app.get("/api/trips/:userId", async (req, res) => {
   }
 });
 
+// ✅ Restar cupos de un trip cuando se reserva
+app.post("/api/trips/:tripId/reserve", async (req, res) => {
+  try {
+    const { tripId } = req.params;
+
+    if (!tripId) {
+      return res.status(400).json({ message: "Falta el ID del trip" });
+    }
+
+    // Convertir tripId a ObjectId
+    let tripObjectId;
+    if (mongoose.Types.ObjectId.isValid(tripId)) {
+      tripObjectId = new mongoose.Types.ObjectId(tripId);
+    } else {
+      return res.status(400).json({ message: "ID de trip inválido" });
+    }
+
+    // Buscar el usuario conductor que tiene el trip
+    const driver = await User.findOne({ "trips._id": tripObjectId });
+    if (!driver) {
+      return res.status(404).json({ message: "Trip no encontrado" });
+    }
+
+    // Encontrar el trip específico
+    const trip = driver.trips.id(tripObjectId);
+    if (!trip) {
+      return res.status(404).json({ message: "Trip no encontrado en el conductor" });
+    }
+
+    // Verificar que haya cupos disponibles
+    if (trip.cupos <= 0) {
+      return res.status(400).json({ message: "No hay cupos disponibles" });
+    }
+
+    // Restar 1 a los cupos
+    trip.cupos = trip.cupos - 1;
+    await driver.save();
+
+    res.status(200).json({
+      message: "Cupo reservado exitosamente",
+      cuposActualizados: trip.cupos,
+    });
+  } catch (err) {
+    console.error("❌ Error en POST /api/trips/:tripId/reserve:", err);
+    res.status(500).json({ 
+      message: "Error en servidor", 
+      error: err.message 
+    });
+  }
+});
+
 // ✅ Ruta raíz
 app.get("/", (req, res) => {
   res.send("✅ Backend funcionando 🚀");
