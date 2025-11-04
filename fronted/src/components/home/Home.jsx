@@ -272,6 +272,15 @@ function Home() {
     const [selectedTrip, setSelectedTrip] = useState(null);
 
     const handleReserveStart = (trip) => {
+        // Convertir cupos a número si es necesario
+        const cuposNum = typeof trip.cupos === 'string' ? parseInt(trip.cupos) : trip.cupos;
+        
+        // Verificar si hay cupos disponibles
+        if (cuposNum === 0) {
+            alert("⚠️ Este tramo está lleno. No hay cupos disponibles.");
+            return;
+        }
+
         setSelectedTrip(trip);
         setIsReserving(true);
     };

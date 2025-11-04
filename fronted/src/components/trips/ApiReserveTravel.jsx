@@ -147,7 +147,12 @@ function ReserveTrip({ trip, onFinishReservation }) {
 
             if (!response.ok) {
                 const errorData = await response.json();
-                alert(errorData.message || 'Error al reservar el cupo. Por favor, intenta nuevamente.');
+                // Mensaje personalizado si está lleno
+                if (errorData.message && errorData.message.includes('cupos')) {
+                    alert("⚠️ Este tramo está lleno. No hay cupos disponibles.");
+                } else {
+                    alert(errorData.message || 'Error al reservar el cupo. Por favor, intenta nuevamente.');
+                }
                 return;
             }
 
@@ -169,8 +174,35 @@ function ReserveTrip({ trip, onFinishReservation }) {
         return <ReserveContainer><p>No se encontró el viaje.</p></ReserveContainer>;
     }
 
+    // Verificar cupos al cargar el componente
+    const cuposNum = typeof trip.cupos === 'string' ? parseInt(trip.cupos) : trip.cupos;
+    const isFull = cuposNum === 0;
+
     // 1. Vista de Mapa y Formulario
     if (step === 'map') {
+        // Si está lleno, mostrar mensaje
+        if (isFull) {
+            return (
+                <ReserveContainer>
+                    <FormCard>
+                        <Title>⚠️ Tramo Lleno</Title>
+                        <Subtitle style={{ color: '#e74c3c', fontSize: '1.1rem', marginBottom: '20px' }}>
+                            Este tramo no tiene cupos disponibles
+                        </Subtitle>
+                        <p style={{ color: colors.white, marginBottom: '30px' }}>
+                            Lo sentimos, este viaje ya está completo. Por favor, busca otro tramo disponible.
+                        </p>
+                        <ReserveButton 
+                            onClick={onFinishReservation}
+                            style={{ backgroundColor: colors.white, color: '#2c3e50' }}
+                        >
+                            Volver
+                        </ReserveButton>
+                    </FormCard>
+                </ReserveContainer>
+            );
+        }
+
         return (
             <ReserveContainer>
                 <FormCard>

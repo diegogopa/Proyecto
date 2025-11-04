@@ -78,9 +78,31 @@ const ActionButton = styled.button`
     &:hover {
         background-color: ${colors.primaryHover};
     }
+
+    &:disabled {
+        background-color: #95a5a6;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+`;
+
+const FullMessage = styled.div`
+    background-color: #e74c3c;
+    color: ${colors.white};
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.85em;
+    font-weight: 600;
+    text-align: center;
+    margin-top: 10px;
+    align-self: flex-end;
 `;
 
 const TripCard = ({ sector, conductor, desde, para, horaSalida, valor, cupos, onReserve }) => {
+    // Convertir cupos a número si es necesario
+    const cuposNum = typeof cupos === 'string' ? parseInt(cupos) : cupos;
+    const isFull = cuposNum === 0;
+
     return (
         <CardContainer>
             <div>
@@ -95,9 +117,13 @@ const TripCard = ({ sector, conductor, desde, para, horaSalida, valor, cupos, on
                 <DetailText>Valor: {valor}</DetailText>
                 <DetailText>Cupos: {cupos}</DetailText>
             </div>
-            <ActionButton onClick={onReserve}>
-                <FontAwesomeIcon icon={faPlus} />
-            </ActionButton>
+            {isFull ? (
+                <FullMessage>🚫 Lleno</FullMessage>
+            ) : (
+                <ActionButton onClick={onReserve}>
+                    <FontAwesomeIcon icon={faPlus} />
+                </ActionButton>
+            )}
         </CardContainer>
     );
 };
