@@ -257,21 +257,16 @@ const GreetingLeft = styled.h2`
 `;
 
 
-const mockTrips = [
-    { id: 1, sector: "Colina", conductor: "Miguel Ordoñez", desde: "Calle 153", para: "Universidad", horaSalida: "7:30 AM", valor: "$10.000", cupos: 3 },
-    { id: 2, sector: "Calle 116", conductor: "Sandra Torres", desde: "Carrera 15", para: "Universidad", horaSalida: "6:45 AM", valor: "$8.000", cupos: 2 },
-    { id: 3, sector: "Samaria Chía", conductor: "Nicolás Cruz", desde: "Chía Centro", para: "Universidad", horaSalida: "6:00 AM", valor: "$15.000", cupos: 1 },
-    { id: 4, sector: "Huertas Cajicá", conductor: "Sara Mora", desde: "Cajicá", para: "Universidad", horaSalida: "6:15 AM", valor: "$18.000", cupos: 4 },
-];
-
 function Home() {
     const { isDriver } = useDriver();
     const [userName, setUserName] = useState("Susana");
     const [menuOpen, setMenuOpen] = useState(false);
     const [sector, setSector] = useState("");
     const [puestos, setPuestos] = useState("");
-    const [filteredTrips, setFilteredTrips] = useState(mockTrips);
+    const [allTrips, setAllTrips] = useState([]);
+    const [filteredTrips, setFilteredTrips] = useState([]);
     const [activeTab, setActiveTab] = useState("home");
+    const [isLoading, setIsLoading] = useState(true);
     const navigate = useNavigate();
     const [isReserving, setIsReserving] = useState(false);
     const [selectedTrip, setSelectedTrip] = useState(null);
@@ -287,8 +282,49 @@ function Home() {
         setActiveTab("home");
     };
 
+    // Obtener todos los viajes del backend
+    useEffect(() => {
+        const fetchTrips = async () => {
+            try {
+                setIsLoading(true);
+                const url = "https://proyecto5-vs2l.onrender.com/api/trips";
+                console.log("Fetching trips from:", url);
+                
+                const res = await fetch(url, {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                });
+                
+                console.log("Response status:", res.status);
+                
+                if (!res.ok) {
+                    const errorText = await res.text();
+                    console.error("Error response:", errorText);
+                    throw new Error(`Error al obtener viajes: ${res.status} ${errorText}`);
+                }
+                
+                const data = await res.json();
+                console.log("Trips data received:", data);
+                setAllTrips(data.trips || []);
+                setFilteredTrips(data.trips || []);
+            } catch (error) {
+                console.error("Error fetching trips:", error);
+                setAllTrips([]);
+                setFilteredTrips([]);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        if (activeTab === "home") {
+            fetchTrips();
+        }
+    }, [activeTab]);
+
     const handleSearch = () => {
-        const filtered = mockTrips.filter(
+        const filtered = allTrips.filter(
         (trip) =>
             (sector === "" || trip.sector === sector) &&
             (puestos === "" || trip.cupos >= parseInt(puestos))
@@ -361,10 +397,9 @@ return (
 
                     <Selector value={sector} onChange={(e) => setSector(e.target.value)}>
                         <option value="">Sectores</option>
-                        <option value="Colina">Colina</option>
-                        <option value="Calle 116">Calle 116</option>
-                        <option value="Samaria Chía">Samaria Chía</option>
-                        <option value="Huertas Cajicá">Huertas Cajicá</option>
+                        {Array.from(new Set(allTrips.map(trip => trip.sector))).map((s) => (
+                            <option key={s} value={s}>{s}</option>
+                        ))}
                     </Selector>
 
                     <SearchInput
@@ -380,21 +415,27 @@ return (
                     </ActionButton>
                 </SearchBarContainer>
 
-                <TripCardGrid>
-                    {filteredTrips.map((trip) => (
-                    <TripCard
-                        key={trip.id}
-                        sector={trip.sector}
-                        conductor={trip.conductor}
-                        desde={trip.desde}
-                        para={trip.para}
-                        horaSalida={trip.horaSalida}
-                        valor={trip.valor}
-                        cupos={trip.cupos}
-                        onReserve={() => handleReserveStart(trip)}
-                    />
-                    ))}
-                </TripCardGrid>
+                {isLoading ? (
+                    <p style={{ textAlign: "center", color: colors.text }}>Cargando viajes...</p>
+                ) : filteredTrips.length === 0 ? (
+                    <p style={{ textAlign: "center", color: colors.text }}>No hay viajes disponibles 😢</p>
+                ) : (
+                    <TripCardGrid>
+                        {filteredTrips.map((trip) => (
+                        <TripCard
+                            key={trip.id || trip.tripId}
+                            sector={trip.sector}
+                            conductor={trip.conductor}
+                            desde={trip.desde}
+                            para={trip.para}
+                            horaSalida={trip.horaSalida}
+                            valor={trip.valor}
+                            cupos={trip.cupos}
+                            onReserve={() => handleReserveStart(trip)}
+                        />
+                        ))}
+                    </TripCardGrid>
+                )}
                 </>
             )}
 

@@ -59,6 +59,8 @@ const userSchema = new mongoose.Schema(
         fromLocation: { type: String, required: true },
         toLocation: { type: String, required: true },
         price: { type: Number, required: true },
+        sector: { type: String, required: true },
+        cupos: { type: Number, required: true },
         createdAt: { type: Date, default: Date.now },
       },
     ],
@@ -180,9 +182,9 @@ app.put("/api/users/:email", async (req, res) => {
 // ✅ Crear un trip
 app.post("/api/trips", async (req, res) => {
   try {
-    const { userId, departureTime, fromLocation, toLocation, price } = req.body;
+    const { userId, departureTime, fromLocation, toLocation, price, sector, cupos } = req.body;
 
-    if (!userId || !departureTime || !fromLocation || !toLocation || !price) {
+    if (!userId || !departureTime || !fromLocation || !toLocation || !price || !sector || !cupos) {
       return res.status(400).json({ message: "Faltan datos del tramo" });
     }
 
@@ -190,12 +192,22 @@ app.post("/api/trips", async (req, res) => {
     if (!user)
       return res.status(404).json({ message: "Usuario no encontrado" });
 
-    user.trips.push({ departureTime, fromLocation, toLocation, price });
+    const newTrip = { departureTime, fromLocation, toLocation, price, sector, cupos };
+    user.trips.push(newTrip);
     await user.save();
 
+    // Obtener el último trip creado (el que acabamos de agregar)
+    const createdTrip = user.trips[user.trips.length - 1];
+
     res.status(201).json({
-      message: "Tramo creado correctamente",
-      trips: user.trips,
+      _id: createdTrip._id,
+      departureTime: createdTrip.departureTime,
+      fromLocation: createdTrip.fromLocation,
+      toLocation: createdTrip.toLocation,
+      price: createdTrip.price,
+      sector: createdTrip.sector,
+      cupos: createdTrip.cupos,
+      createdAt: createdTrip.createdAt,
     });
   } catch (err) {
     console.error(err);
@@ -203,7 +215,55 @@ app.post("/api/trips", async (req, res) => {
   }
 });
 
-// ✅ Obtener todos los trips de un usuario
+// ✅ Obtener todos los trips de todos los usuarios (para pasajeros)
+// IMPORTANTE: Esta ruta debe estar ANTES de /api/trips/:userId para que Express la reconozca
+app.get("/api/trips", async (req, res) => {
+  try {
+    console.log("✅ GET /api/trips - Iniciando consulta...");
+    
+    // Obtener todos los usuarios (luego filtramos los que tienen trips)
+    const users = await User.find({});
+    
+    console.log(`✅ Total de usuarios encontrados: ${users.length}`);
+    
+    const allTrips = [];
+    
+    users.forEach(user => {
+      if (user.trips && Array.isArray(user.trips) && user.trips.length > 0) {
+        user.trips.forEach(trip => {
+          // Verificar que el trip tenga los campos necesarios
+          if (trip.departureTime && trip.fromLocation && trip.toLocation) {
+            allTrips.push({
+              id: trip._id ? trip._id.toString() : `trip-${Math.random()}`,
+              sector: trip.sector || "Sin sector",
+              conductor: `${user.nombre || ""} ${user.apellido || ""}`.trim() || "Conductor",
+              desde: trip.fromLocation || "Sin origen",
+              para: trip.toLocation || "Sin destino",
+              horaSalida: trip.departureTime || "Sin hora",
+              valor: `$${(trip.price || 0).toLocaleString()}`,
+              cupos: trip.cupos || 0,
+              userId: user._id ? user._id.toString() : "",
+              tripId: trip._id ? trip._id.toString() : "",
+              createdAt: trip.createdAt || new Date(),
+            });
+          }
+        });
+      }
+    });
+
+    console.log(`✅ Total de trips encontrados: ${allTrips.length}`);
+    res.json({ trips: allTrips });
+  } catch (err) {
+    console.error("❌ Error en GET /api/trips:", err);
+    res.status(500).json({ 
+      message: "Error en servidor", 
+      error: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+  }
+});
+
+// ✅ Obtener todos los trips de un usuario específico
 app.get("/api/trips/:userId", async (req, res) => {
   try {
     const user = await User.findById(req.params.userId);

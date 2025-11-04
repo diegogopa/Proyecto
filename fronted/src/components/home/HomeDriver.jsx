@@ -276,8 +276,33 @@ function HomeDriver() {
   }, []);
 
   useEffect(() => {
-    const storedUser = JSON.parse(localStorage.getItem("user"));
-    if (storedUser?.trips) setTrips(storedUser.trips);
+    const fetchUserTrips = async () => {
+      const storedUser = JSON.parse(localStorage.getItem("user"));
+      if (!storedUser?._id) return;
+      
+      try {
+        // Obtener los viajes del backend para asegurar que están actualizados
+        const res = await fetch(`https://proyecto5-vs2l.onrender.com/api/trips/${storedUser._id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setTrips(data.trips || []);
+          // Actualizar localStorage con los viajes del backend
+          storedUser.trips = data.trips || [];
+          localStorage.setItem("user", JSON.stringify(storedUser));
+        } else {
+          // Si falla, usar los del localStorage como fallback
+          if (storedUser?.trips) setTrips(storedUser.trips);
+        }
+      } catch (error) {
+        console.error("Error fetching user trips:", error);
+        // Fallback a localStorage
+        if (storedUser?.trips) setTrips(storedUser.trips);
+      }
+    };
+    
+    if (activeTab === "reserved" || activeTab === "current") {
+      fetchUserTrips();
+    }
   }, [activeTab]);
 
   // Próximo viaje
@@ -312,7 +337,10 @@ function HomeDriver() {
 
   const handleSubmit = async (tripData) => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
-    if (!storedUser?._id) return alert("Usuario no encontrado 😢");
+    if (!storedUser?._id) {
+      alert("Usuario no encontrado 😢");
+      return;
+    }
 
     const finalTripData = {
       ...tripData,
@@ -330,8 +358,20 @@ function HomeDriver() {
 
       if (!res.ok) throw new Error(data.message || "No se pudo crear el tramo 😢");
 
+      // Actualizar el usuario local con el nuevo trip
       const updatedUser = { ...storedUser };
-      updatedUser.trips = [...(storedUser.trips || []), data];
+      // El backend devuelve el trip creado directamente (sin el objeto trips)
+      const tripData = {
+        _id: data._id,
+        departureTime: data.departureTime,
+        fromLocation: data.fromLocation,
+        toLocation: data.toLocation,
+        price: data.price,
+        sector: data.sector,
+        cupos: data.cupos,
+        createdAt: data.createdAt
+      };
+      updatedUser.trips = [...(storedUser.trips || []), tripData];
       localStorage.setItem("user", JSON.stringify(updatedUser));
       setTrips(updatedUser.trips);
 
