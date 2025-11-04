@@ -81,6 +81,23 @@ const ReserveButton = styled.button`
     }
 `;
 
+const CancelButton = styled.button`
+    background-color: #95a5a6;
+    color: ${colors.white};
+    border: none;
+    cursor: pointer;
+    padding: 12px 25px;
+    border-radius: 8px;
+    font-weight: 600;
+    width: 100%;
+    margin-top: 10px;
+    transition: background-color 0.3s;
+
+    &:hover {
+        background-color: #7f8c8d;
+    }
+`;
+
 // --- Estilos de Confirmación ---
 
 const ConfirmationCard = styled(FormCard)`
@@ -225,6 +242,10 @@ function ReserveTrip({ trip, onFinishReservation }) {
                     <ReserveButton onClick={handleReserveClick}>
                         Reservar
                     </ReserveButton>
+                    
+                    <CancelButton onClick={onFinishReservation}>
+                        Salir
+                    </CancelButton>
                 </FormCard>
             </ReserveContainer>
         );
