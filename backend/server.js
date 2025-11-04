@@ -64,6 +64,17 @@ const userSchema = new mongoose.Schema(
         createdAt: { type: Date, default: Date.now },
       },
     ],
+
+    // ✅ Lista de reservas del pasajero
+    reservations: [
+      {
+        tripId: { type: mongoose.Schema.Types.ObjectId, required: true },
+        driverUserId: { type: mongoose.Schema.Types.ObjectId, required: true },
+        pickupAddress: { type: String, default: "" },
+        status: { type: String, default: "Pendiente" },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
   },
   { timestamps: true }
 );
@@ -108,6 +119,7 @@ app.post("/api/users/register", async (req, res) => {
       marca: req.body.marca || "",
       modelo: req.body.modelo || "",
       trips: [], // ✅ Importante inicializar trips
+      reservations: [], // ✅ Importante inicializar reservations
     });
 
     await nuevoUsuario.save();
@@ -281,9 +293,14 @@ app.get("/api/trips/:userId", async (req, res) => {
 app.post("/api/trips/:tripId/reserve", async (req, res) => {
   try {
     const { tripId } = req.params;
+    const { userId, pickupAddress } = req.body || {};
 
     if (!tripId) {
       return res.status(400).json({ message: "Falta el ID del trip" });
+    }
+
+    if (!userId) {
+      return res.status(400).json({ message: "Falta el ID del pasajero" });
     }
 
     // Convertir tripId a ObjectId
@@ -315,9 +332,26 @@ app.post("/api/trips/:tripId/reserve", async (req, res) => {
     trip.cupos = trip.cupos - 1;
     await driver.save();
 
+    // Guardar la reserva en el pasajero
+    const passenger = await User.findById(userId);
+    if (!passenger) {
+      return res.status(404).json({ message: "Usuario pasajero no encontrado" });
+    }
+
+    const reservation = {
+      tripId: tripObjectId,
+      driverUserId: driver._id,
+      pickupAddress: pickupAddress || "",
+      status: "Pendiente",
+    };
+
+    passenger.reservations.push(reservation);
+    await passenger.save();
+
     res.status(200).json({
       message: "Cupo reservado exitosamente",
       cuposActualizados: trip.cupos,
+      reservation: passenger.reservations[passenger.reservations.length - 1],
     });
   } catch (err) {
     console.error("❌ Error en POST /api/trips/:tripId/reserve:", err);

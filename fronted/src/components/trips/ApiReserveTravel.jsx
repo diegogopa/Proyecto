@@ -154,12 +154,23 @@ function ReserveTrip({ trip, onFinishReservation }) {
         }
 
         try {
-            // Llamar al endpoint para restar 1 cupo
+            // Obtener el usuario pasajero para guardar la reserva
+            const storedUser = JSON.parse(localStorage.getItem('user'));
+            if (!storedUser || !storedUser._id) {
+                alert('No se encontró la sesión del usuario. Inicia sesión nuevamente.');
+                return;
+            }
+
+            // Llamar al endpoint para restar 1 cupo y guardar la reserva
             const response = await fetch(`https://proyecto5-vs2l.onrender.com/api/trips/${tripId}/reserve`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                body: JSON.stringify({
+                    userId: storedUser._id,
+                    pickupAddress: pickupAddress.trim(),
+                }),
             });
 
             if (!response.ok) {
