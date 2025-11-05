@@ -6,6 +6,9 @@ import Button from "../components/common/Button";
 import { useNavigate } from "react-router-dom";
 import AddPhoto from "../components/common/AddPhoto";
 import CarIcon from "../assets/AddPhoto.png";
+import axios from "axios";
+
+const API_BASE_URL = "https://proyecto5-vs2l.onrender.com/api";
 
 const PageWrapper = styled.div`
   display: flex;
@@ -71,10 +74,37 @@ const ButtonsRow = styled.div`
 
 const SoatPhoto = () => {
   const [photo, setPhoto] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleNext = () => {
-    navigate("/home-driver");
+  const handleNext = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Obtener el email del localStorage
+      const userEmail = localStorage.getItem("userEmail");
+      if (!userEmail) {
+        alert("No se encontró la información del usuario. Por favor, inicia sesión.");
+        navigate("/login");
+        return;
+      }
+
+      // Obtener los datos del usuario desde el backend
+      const response = await axios.get(`${API_BASE_URL}/users/${userEmail}`);
+      const user = response.data;
+
+      // Guardar los datos del usuario en localStorage como se hace en el login
+      localStorage.setItem("user", JSON.stringify(user));
+
+      // Redirigir al home
+      navigate("/home");
+    } catch (error) {
+      console.error("Error al obtener datos del usuario:", error);
+      alert("Error al cargar la información del usuario. Por favor, inicia sesión.");
+      navigate("/login");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -89,8 +119,13 @@ const SoatPhoto = () => {
             text="Anterior"
             $primary
             onClick={() => navigate("/car-photo")}
+            disabled={isLoading}
           />
-          <Button text="Siguiente" onClick={handleNext} />
+          <Button 
+            text={isLoading ? "Cargando..." : "Siguiente"} 
+            onClick={handleNext}
+            disabled={isLoading}
+          />
         </ButtonsRow>
       </Card>
     </PageWrapper>
