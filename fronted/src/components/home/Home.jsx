@@ -270,6 +270,8 @@ function Home() {
     const navigate = useNavigate();
     const [isReserving, setIsReserving] = useState(false);
     const [selectedTrip, setSelectedTrip] = useState(null);
+    const [reservations, setReservations] = useState([]);
+    const [isLoadingReservations, setIsLoadingReservations] = useState(false);
 
     const handleReserveStart = (trip) => {
         // Convertir cupos a número si es necesario
@@ -291,6 +293,26 @@ function Home() {
         setActiveTab("home");
         // Refrescar los trips para mostrar los cupos actualizados
         // Esto se hace automáticamente cuando activeTab cambia a "home" en el useEffect
+        // También refrescar las reservas si el usuario vuelve a la pestaña de reservas
+        const refreshReservations = async () => {
+            try {
+                const storedUser = JSON.parse(localStorage.getItem("user"));
+                if (!storedUser?._id) return;
+
+                const res = await fetch(`https://proyecto5-vs2l.onrender.com/api/users/${storedUser._id}/reservations`, {
+                    method: "GET",
+                    headers: { "Content-Type": "application/json" },
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    setReservations(data.reservations || []);
+                }
+            } catch (error) {
+                console.error("Error refreshing reservations:", error);
+            }
+        };
+        refreshReservations();
     };
 
     // Obtener todos los viajes del backend
@@ -331,6 +353,44 @@ function Home() {
 
         if (activeTab === "home") {
             fetchTrips();
+        }
+    }, [activeTab]);
+
+    // Obtener reservas del usuario
+    useEffect(() => {
+        const fetchReservations = async () => {
+            try {
+                setIsLoadingReservations(true);
+                const storedUser = JSON.parse(localStorage.getItem("user"));
+                if (!storedUser?._id) {
+                    setReservations([]);
+                    return;
+                }
+
+                const res = await fetch(`https://proyecto5-vs2l.onrender.com/api/users/${storedUser._id}/reservations`, {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    setReservations(data.reservations || []);
+                } else {
+                    console.error("Error fetching reservations:", res.status);
+                    setReservations([]);
+                }
+            } catch (error) {
+                console.error("Error fetching reservations:", error);
+                setReservations([]);
+            } finally {
+                setIsLoadingReservations(false);
+            }
+        };
+
+        if (activeTab === "reserved") {
+            fetchReservations();
         }
     }, [activeTab]);
 
@@ -451,9 +511,69 @@ return (
             )}
 
             {activeTab === "reserved" && (
-                <h3 style={{ textAlign: "center", color: colors.text }}>
-                    🚗 Aquí verás tus viajes reservados.
-                </h3>
+                <>
+                    {isLoadingReservations ? (
+                        <p style={{ textAlign: "center", color: colors.text }}>Cargando reservas...</p>
+                    ) : reservations.length === 0 ? (
+                        <p style={{ textAlign: "center", color: colors.text }}>Aún no has reservado ningún viaje 😢</p>
+                    ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+                            {reservations.map((reservation) => (
+                                reservation.tripDetails ? (
+                                    <div
+                                        key={reservation._id}
+                                        style={{
+                                            background: "white",
+                                            padding: "20px",
+                                            borderRadius: "10px",
+                                            boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+                                            display: "flex",
+                                            justifyContent: "space-between",
+                                            alignItems: "center",
+                                        }}
+                                    >
+                                        <div style={{ flex: 1 }}>
+                                            <strong style={{ fontSize: "1.1rem", color: colors.text }}>
+                                                {reservation.pickupAddress || reservation.tripDetails.desde} → {reservation.tripDetails.para}
+                                            </strong>
+                                            <p style={{ margin: "8px 0", color: colors.text }}>
+                                                Hora: {reservation.tripDetails.horaSalida}
+                                            </p>
+                                            <p style={{ margin: "8px 0", color: colors.text }}>
+                                                Conductor: {reservation.driverName}
+                                            </p>
+                                            <p style={{ margin: "8px 0", color: colors.text }}>
+                                                Valor: ${typeof reservation.tripDetails.valor === 'number' 
+                                                    ? reservation.tripDetails.valor.toLocaleString() 
+                                                    : reservation.tripDetails.valor || "0"}
+                                            </p>
+                                            <p style={{ margin: "8px 0", color: colors.text, fontSize: "0.9rem" }}>
+                                                Estado: {reservation.status}
+                                            </p>
+                                        </div>
+                                        <button
+                                            style={{
+                                                background: colors.primary,
+                                                color: "white",
+                                                border: "none",
+                                                borderRadius: "6px",
+                                                padding: "8px 16px",
+                                                cursor: "pointer",
+                                                fontWeight: "600",
+                                            }}
+                                            onClick={() => {
+                                                // TODO: Implementar cancelación de reserva
+                                                alert("Función de cancelar próximamente");
+                                            }}
+                                        >
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                ) : null
+                            ))}
+                        </div>
+                    )}
+                </>
             )}
 
             {activeTab === "current" && (

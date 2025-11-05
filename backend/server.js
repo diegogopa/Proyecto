@@ -289,6 +289,84 @@ app.get("/api/trips/:userId", async (req, res) => {
   }
 });
 
+// ✅ Obtener reservas de un usuario con información completa del viaje
+app.get("/api/users/:userId/reservations", async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ message: "Falta el ID del usuario" });
+    }
+
+    // Buscar el usuario pasajero
+    const passenger = await User.findById(userId);
+    if (!passenger) {
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
+
+    // Obtener todas las reservas con información completa del viaje
+    const reservationsWithDetails = await Promise.all(
+      passenger.reservations.map(async (reservation) => {
+        try {
+          // Buscar el conductor que tiene el trip
+          const driver = await User.findById(reservation.driverUserId);
+          if (!driver) {
+            return {
+              ...reservation.toObject(),
+              tripDetails: null,
+              driverName: "Conductor no encontrado",
+            };
+          }
+
+          // Buscar el trip específico
+          const trip = driver.trips.id(reservation.tripId);
+          if (!trip) {
+            return {
+              ...reservation.toObject(),
+              tripDetails: null,
+              driverName: `${driver.nombre || ""} ${driver.apellido || ""}`.trim() || "Conductor",
+            };
+          }
+
+          return {
+            _id: reservation._id,
+            tripId: reservation.tripId,
+            driverUserId: reservation.driverUserId,
+            pickupAddress: reservation.pickupAddress,
+            status: reservation.status,
+            createdAt: reservation.createdAt,
+            tripDetails: {
+              desde: trip.fromLocation,
+              para: trip.toLocation,
+              horaSalida: trip.departureTime,
+              valor: trip.price,
+              sector: trip.sector,
+            },
+            driverName: `${driver.nombre || ""} ${driver.apellido || ""}`.trim() || "Conductor",
+          };
+        } catch (error) {
+          console.error(`Error obteniendo detalles de reserva ${reservation._id}:`, error);
+          return {
+            ...reservation.toObject(),
+            tripDetails: null,
+            driverName: "Error al cargar",
+          };
+        }
+      })
+    );
+
+    res.status(200).json({
+      reservations: reservationsWithDetails,
+    });
+  } catch (err) {
+    console.error("❌ Error en GET /api/users/:userId/reservations:", err);
+    res.status(500).json({
+      message: "Error en servidor",
+      error: err.message,
+    });
+  }
+});
+
 // ✅ Restar cupos de un trip cuando se reserva
 app.post("/api/trips/:tripId/reserve", async (req, res) => {
   try {
