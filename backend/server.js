@@ -440,6 +440,75 @@ app.post("/api/trips/:tripId/reserve", async (req, res) => {
   }
 });
 
+// ✅ Cancelar una reserva (eliminar reserva y aumentar cupos)
+app.delete("/api/reservations/:reservationId", async (req, res) => {
+  try {
+    const { reservationId } = req.params;
+    const { userId } = req.body || req.query;
+
+    if (!reservationId) {
+      return res.status(400).json({ message: "Falta el ID de la reserva" });
+    }
+
+    if (!userId) {
+      return res.status(400).json({ message: "Falta el ID del usuario" });
+    }
+
+    // Convertir reservationId a ObjectId
+    let reservationObjectId;
+    if (mongoose.Types.ObjectId.isValid(reservationId)) {
+      reservationObjectId = new mongoose.Types.ObjectId(reservationId);
+    } else {
+      return res.status(400).json({ message: "ID de reserva inválido" });
+    }
+
+    // Buscar el usuario pasajero
+    const passenger = await User.findById(userId);
+    if (!passenger) {
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
+
+    // Buscar la reserva
+    const reservation = passenger.reservations.id(reservationObjectId);
+    if (!reservation) {
+      return res.status(404).json({ message: "Reserva no encontrada" });
+    }
+
+    // Guardar el tripId y driverUserId antes de eliminar
+    const tripId = reservation.tripId;
+    const driverUserId = reservation.driverUserId;
+
+    // Eliminar la reserva del pasajero
+    passenger.reservations.pull(reservationObjectId);
+    await passenger.save();
+
+    // Buscar el conductor y aumentar los cupos del viaje
+    const driver = await User.findById(driverUserId);
+    if (driver) {
+      // El tripId ya es un ObjectId, pero necesitamos asegurarnos de que sea válido
+      if (mongoose.Types.ObjectId.isValid(tripId)) {
+        const trip = driver.trips.id(tripId);
+        if (trip) {
+          // Aumentar 1 a los cupos
+          trip.cupos = trip.cupos + 1;
+          await driver.save();
+        }
+      }
+    }
+
+    res.status(200).json({
+      message: "Reserva cancelada exitosamente",
+      reservationId: reservationId,
+    });
+  } catch (err) {
+    console.error("❌ Error en DELETE /api/reservations/:reservationId:", err);
+    res.status(500).json({ 
+      message: "Error en servidor", 
+      error: err.message 
+    });
+  }
+});
+
 // ✅ Ruta raíz
 app.get("/", (req, res) => {
   res.send("✅ Backend funcionando 🚀");

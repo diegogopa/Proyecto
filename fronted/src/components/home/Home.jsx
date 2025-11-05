@@ -394,6 +394,53 @@ function Home() {
         }
     }, [activeTab]);
 
+    // Función para cancelar una reserva
+    const handleCancelReservation = async (reservationId) => {
+        if (!window.confirm("¿Estás seguro de que quieres cancelar esta reserva?")) {
+            return;
+        }
+
+        try {
+            const storedUser = JSON.parse(localStorage.getItem("user"));
+            if (!storedUser?._id) {
+                alert("No se encontró la sesión del usuario. Inicia sesión nuevamente.");
+                return;
+            }
+
+            const res = await fetch(`https://proyecto5-vs2l.onrender.com/api/reservations/${reservationId}`, {
+                method: "DELETE",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    userId: storedUser._id,
+                }),
+            });
+
+            if (res.ok) {
+                // Recargar las reservas
+                const refreshRes = await fetch(`https://proyecto5-vs2l.onrender.com/api/users/${storedUser._id}/reservations`, {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                });
+
+                if (refreshRes.ok) {
+                    const data = await refreshRes.json();
+                    setReservations(data.reservations || []);
+                }
+                alert("Reserva cancelada exitosamente");
+            } else {
+                const errorData = await res.json();
+                alert(errorData.message || "Error al cancelar la reserva. Por favor, intenta nuevamente.");
+            }
+        } catch (error) {
+            console.error("Error canceling reservation:", error);
+            alert("Error al cancelar la reserva. Por favor, intenta nuevamente.");
+        }
+    };
+
     const handleSearch = () => {
         const filtered = allTrips.filter(
         (trip) =>
@@ -561,10 +608,7 @@ return (
                                                 cursor: "pointer",
                                                 fontWeight: "600",
                                             }}
-                                            onClick={() => {
-                                                // TODO: Implementar cancelación de reserva
-                                                alert("Función de cancelar próximamente");
-                                            }}
+                                            onClick={() => handleCancelReservation(reservation._id)}
                                         >
                                             Cancelar
                                         </button>
