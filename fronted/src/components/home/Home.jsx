@@ -482,7 +482,7 @@ return (
                         onClick={() => setMenuOpen(!menuOpen)}
                     />
                     {/* ✅ Aquí el cambio solicitado */}
-                    <SwitchButton onClick={() => navigate('/verify-car')}>
+                    <SwitchButton onClick={() => navigate('/car-question')}>
                         Cambiar a Conductor
                     </SwitchButton>
                     <DropdownMenu open={menuOpen}>
