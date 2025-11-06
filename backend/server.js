@@ -423,19 +423,231 @@ app.post("/api/trips/:tripId/reserve", async (req, res) => {
       status: "Pendiente",
     };
 
+    console.log("📝 Creando reserva:");
+    console.log("  - TripId:", tripObjectId.toString());
+    console.log("  - DriverUserId:", driver._id.toString());
+    console.log("  - PassengerId:", passenger._id.toString());
+    console.log("  - Status: Pendiente");
+
     passenger.reservations.push(reservation);
     await passenger.save();
+
+    const savedReservation = passenger.reservations[passenger.reservations.length - 1];
+    console.log("✅ Reserva guardada con ID:", savedReservation._id.toString());
 
     res.status(200).json({
       message: "Cupo reservado exitosamente",
       cuposActualizados: trip.cupos,
-      reservation: passenger.reservations[passenger.reservations.length - 1],
+      reservation: savedReservation,
     });
   } catch (err) {
     console.error("❌ Error en POST /api/trips/:tripId/reserve:", err);
     res.status(500).json({ 
       message: "Error en servidor", 
       error: err.message 
+    });
+  }
+});
+
+// ✅ Obtener solicitudes pendientes de un conductor
+app.get("/api/drivers/:driverId/pending-requests", async (req, res) => {
+  try {
+    const { driverId } = req.params;
+
+    if (!driverId) {
+      return res.status(400).json({ message: "Falta el ID del conductor" });
+    }
+
+    // Convertir driverId a ObjectId para comparaciones correctas
+    let driverObjectId;
+    if (mongoose.Types.ObjectId.isValid(driverId)) {
+      driverObjectId = new mongoose.Types.ObjectId(driverId);
+    } else {
+      return res.status(400).json({ message: "ID de conductor inválido" });
+    }
+
+    // Buscar el conductor
+    const driver = await User.findById(driverObjectId);
+    if (!driver) {
+      return res.status(404).json({ message: "Conductor no encontrado" });
+    }
+
+    console.log(`🔍 Buscando solicitudes pendientes para conductor: ${driverId}`);
+    console.log(`📋 Trips del conductor: ${driver.trips.length}`);
+
+    // Obtener todos los IDs de trips del conductor como ObjectIds y strings
+    const driverTripIds = driver.trips.map(trip => trip._id.toString());
+    const driverTripObjectIds = driver.trips.map(trip => trip._id);
+
+    console.log(`🚗 IDs de trips del conductor:`, driverTripIds);
+
+    // Buscar todos los usuarios que tienen reservas pendientes para los trips de este conductor
+    const allUsers = await User.find({});
+    const pendingRequests = [];
+
+    console.log(`👥 Total de usuarios en la base de datos: ${allUsers.length}`);
+
+    for (const user of allUsers) {
+      if (!user.reservations || user.reservations.length === 0) continue;
+
+      console.log(`🔍 Revisando reservas de usuario: ${user.nombre} ${user.apellido} (${user._id})`);
+      console.log(`   Total de reservas: ${user.reservations.length}`);
+
+      for (const reservation of user.reservations) {
+        // Verificar que la reserva esté pendiente
+        if (reservation.status !== "Pendiente") {
+          console.log(`   ⏭️  Reserva ${reservation._id} no está pendiente (status: ${reservation.status})`);
+          continue;
+        }
+
+        // Comparar driverUserId usando ObjectId
+        const reservationDriverId = reservation.driverUserId ? reservation.driverUserId.toString() : null;
+        const driverIdString = driverObjectId.toString();
+
+        if (!reservationDriverId) {
+          console.log(`   ⚠️  Reserva ${reservation._id} no tiene driverUserId`);
+          continue;
+        }
+
+        // Verificar que el driverUserId coincida
+        if (reservationDriverId !== driverIdString) {
+          console.log(`   ⏭️  Reserva ${reservation._id} no es para este conductor (driverId: ${reservationDriverId} vs ${driverIdString})`);
+          continue;
+        }
+
+        // Verificar que el tripId esté en la lista de trips del conductor
+        const reservationTripIdString = reservation.tripId ? reservation.tripId.toString() : null;
+        
+        if (!reservationTripIdString) {
+          console.log(`   ⚠️  Reserva ${reservation._id} no tiene tripId`);
+          continue;
+        }
+
+        const tripIdMatches = driverTripIds.includes(reservationTripIdString);
+
+        if (!tripIdMatches) {
+          console.log(`   ⏭️  Reserva ${reservation._id} no coincide con ningún trip del conductor (tripId: ${reservationTripIdString})`);
+          console.log(`   📋 Trips disponibles: ${driverTripIds.join(", ")}`);
+          continue;
+        }
+
+        // Buscar el trip específico
+        const trip = driver.trips.id(reservation.tripId);
+        if (trip) {
+          console.log(`✅ Encontrada solicitud pendiente de ${user.nombre} ${user.apellido} para trip ${reservationTripIdString}`);
+          pendingRequests.push({
+            _id: reservation._id,
+            reservationId: reservation._id,
+            tripId: reservation.tripId,
+            passengerId: user._id,
+            passengerName: `${user.nombre || ""} ${user.apellido || ""}`.trim() || "Pasajero",
+            passengerEmail: user.email || "",
+            pickupAddress: reservation.pickupAddress || "",
+            status: reservation.status,
+            createdAt: reservation.createdAt,
+            tripDetails: {
+              desde: trip.fromLocation,
+              para: trip.toLocation,
+              horaSalida: trip.departureTime,
+              valor: trip.price,
+              sector: trip.sector,
+              cupos: trip.cupos,
+            },
+          });
+        } else {
+          console.log(`   ⚠️  No se encontró el trip ${reservationTripIdString} en los trips del conductor`);
+        }
+      }
+    }
+
+    console.log(`📊 Total de solicitudes pendientes encontradas: ${pendingRequests.length}`);
+
+    res.status(200).json({
+      requests: pendingRequests,
+    });
+  } catch (err) {
+    console.error("❌ Error en GET /api/drivers/:driverId/pending-requests:", err);
+    res.status(500).json({
+      message: "Error en servidor",
+      error: err.message,
+    });
+  }
+});
+
+// ✅ Aceptar o rechazar una reserva
+app.put("/api/reservations/:reservationId/status", async (req, res) => {
+  try {
+    const { reservationId } = req.params;
+    const { status, driverId } = req.body;
+
+    if (!reservationId) {
+      return res.status(400).json({ message: "Falta el ID de la reserva" });
+    }
+
+    if (!status || !["Aceptada", "Rechazada"].includes(status)) {
+      return res.status(400).json({ message: "Estado inválido. Debe ser 'Aceptada' o 'Rechazada'" });
+    }
+
+    if (!driverId) {
+      return res.status(400).json({ message: "Falta el ID del conductor" });
+    }
+
+    // Convertir reservationId a ObjectId
+    let reservationObjectId;
+    if (mongoose.Types.ObjectId.isValid(reservationId)) {
+      reservationObjectId = new mongoose.Types.ObjectId(reservationId);
+    } else {
+      return res.status(400).json({ message: "ID de reserva inválido" });
+    }
+
+    // Buscar el usuario pasajero que tiene la reserva
+    const allUsers = await User.find({});
+    let passenger = null;
+    let reservation = null;
+
+    for (const user of allUsers) {
+      if (user.reservations && user.reservations.length > 0) {
+        const foundReservation = user.reservations.id(reservationObjectId);
+        if (foundReservation && foundReservation.driverUserId.toString() === driverId) {
+          passenger = user;
+          reservation = foundReservation;
+          break;
+        }
+      }
+    }
+
+    if (!passenger || !reservation) {
+      return res.status(404).json({ message: "Reserva no encontrada" });
+    }
+
+    // Actualizar el estado de la reserva
+    reservation.status = status;
+    await passenger.save();
+
+    // Si se rechaza, aumentar los cupos del trip
+    if (status === "Rechazada") {
+      const driver = await User.findById(driverId);
+      if (driver) {
+        const trip = driver.trips.id(reservation.tripId);
+        if (trip) {
+          trip.cupos = trip.cupos + 1;
+          await driver.save();
+        }
+      }
+    }
+
+    res.status(200).json({
+      message: `Reserva ${status.toLowerCase()} exitosamente`,
+      reservation: {
+        _id: reservation._id,
+        status: reservation.status,
+      },
+    });
+  } catch (err) {
+    console.error("❌ Error en PUT /api/reservations/:reservationId/status:", err);
+    res.status(500).json({
+      message: "Error en servidor",
+      error: err.message,
     });
   }
 });

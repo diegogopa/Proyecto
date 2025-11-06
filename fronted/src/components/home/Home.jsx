@@ -594,8 +594,16 @@ return (
                                                     ? reservation.tripDetails.valor.toLocaleString() 
                                                     : reservation.tripDetails.valor || "0"}
                                             </p>
-                                            <p style={{ margin: "8px 0", color: colors.text, fontSize: "0.9rem" }}>
-                                                Estado: {reservation.status}
+                                            <p style={{ margin: "8px 0", fontSize: "0.9rem" }}>
+                                                <strong>Estado:</strong>{" "}
+                                                <span style={{
+                                                    color: reservation.status === "Aceptada" ? "#2ecc71" :
+                                                           reservation.status === "Rechazada" ? "#e74c3c" :
+                                                           "#f39c12",
+                                                    fontWeight: "600"
+                                                }}>
+                                                    {reservation.status}
+                                                </span>
                                             </p>
                                         </div>
                                         <button

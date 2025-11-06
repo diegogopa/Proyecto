@@ -265,6 +265,8 @@ function HomeDriver() {
   const [toLocation, setToLocation] = useState('');
   const [price, setPrice] = useState('');
   const [trips, setTrips] = useState([]);
+  const [pendingRequests, setPendingRequests] = useState([]);
+  const [isLoadingRequests, setIsLoadingRequests] = useState(false);
 
   const navigate = useNavigate();
 
@@ -302,6 +304,46 @@ function HomeDriver() {
     
     if (activeTab === "reserved" || activeTab === "current") {
       fetchUserTrips();
+    }
+  }, [activeTab]);
+
+  // Obtener solicitudes pendientes
+  useEffect(() => {
+    const fetchPendingRequests = async () => {
+      const storedUser = JSON.parse(localStorage.getItem("user"));
+      if (!storedUser?._id) {
+        console.error("No se encontró el ID del usuario en localStorage");
+        return;
+      }
+      
+      try {
+        setIsLoadingRequests(true);
+        const url = `https://proyecto5-vs2l.onrender.com/api/drivers/${storedUser._id}/pending-requests`;
+        console.log("🔍 Buscando solicitudes pendientes en:", url);
+        console.log("👤 ID del conductor:", storedUser._id);
+        
+        const res = await fetch(url);
+        
+        if (res.ok) {
+          const data = await res.json();
+          console.log("✅ Solicitudes recibidas:", data.requests?.length || 0);
+          console.log("📋 Datos completos:", data);
+          setPendingRequests(data.requests || []);
+        } else {
+          const errorData = await res.json().catch(() => ({ message: "Error desconocido" }));
+          console.error("❌ Error al obtener solicitudes:", res.status, errorData);
+          setPendingRequests([]);
+        }
+      } catch (error) {
+        console.error("❌ Error fetching pending requests:", error);
+        setPendingRequests([]);
+      } finally {
+        setIsLoadingRequests(false);
+      }
+    };
+    
+    if (activeTab === "pending") {
+      fetchPendingRequests();
     }
   }, [activeTab]);
 
@@ -385,6 +427,51 @@ function HomeDriver() {
     }
   };
 
+  // Aceptar o rechazar una solicitud
+  const handleRequestAction = async (reservationId, action) => {
+    const storedUser = JSON.parse(localStorage.getItem("user"));
+    if (!storedUser?._id) {
+      alert("Usuario no encontrado 😢");
+      return;
+    }
+
+    const status = action === "accept" ? "Aceptada" : "Rechazada";
+    const confirmMessage = action === "accept" 
+      ? "¿Estás seguro de que quieres aceptar esta solicitud?"
+      : "¿Estás seguro de que quieres rechazar esta solicitud?";
+
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`https://proyecto5-vs2l.onrender.com/api/reservations/${reservationId}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: status,
+          driverId: storedUser._id,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.message || "No se pudo procesar la solicitud 😢");
+
+      alert(`Solicitud ${status.toLowerCase()} exitosamente ✅`);
+
+      // Recargar las solicitudes pendientes
+      const refreshRes = await fetch(`https://proyecto5-vs2l.onrender.com/api/drivers/${storedUser._id}/pending-requests`);
+      if (refreshRes.ok) {
+        const refreshData = await refreshRes.json();
+        setPendingRequests(refreshData.requests || []);
+      }
+    } catch (error) {
+      alert(error.message);
+      console.error(error);
+    }
+  };
+
   return (
     <>
       <HomeContainer>
@@ -414,6 +501,10 @@ function HomeDriver() {
             <img src={iconHome} alt="home" style={{ width: "18px", height: "18px", marginRight: "8px" }} />
             Inicio
           </NavButton>
+          <NavButton $active={activeTab === "pending"} onClick={() => setActiveTab("pending")}>
+            <img src={iconReservedTravel} alt="pending" style={{ width: "18px", height: "18px", marginRight: "8px" }} />
+            Viajes pendientes
+          </NavButton>
           <NavButton $active={activeTab === "reserved"} onClick={() => setActiveTab("reserved")}>
             <img src={iconReservedTravel} alt="reserved" style={{ width: "18px", height: "18px", marginRight: "8px" }} />
             Viajes creados
@@ -428,8 +519,107 @@ function HomeDriver() {
           {activeTab === "home" && (
             <GreetingContainer>
               <GreetingLeft>¡Hola {userName || "Conductor"}! 🚗</GreetingLeft>
-              <CreateButton onClick={() => setShowModal(true)}>+ Crear tramo</CreateButton>
+              <div style={{ display: "flex", gap: "10px" }}>
+                <CreateButton onClick={() => setShowModal(true)}>+ Crear tramo</CreateButton>
+                <CreateButton onClick={() => setActiveTab("pending")} style={{ backgroundColor: colors.details }}>
+                  📋 Ver viajes pendientes
+                </CreateButton>
+              </div>
             </GreetingContainer>
+          )}
+
+          {activeTab === "pending" && (
+            <>
+              <h3 style={{ textAlign: "center", color: colors.text, marginBottom: "20px" }}>
+                📋 Solicitudes de viajes pendientes
+              </h3>
+
+              {isLoadingRequests ? (
+                <p style={{ textAlign: "center", color: colors.text }}>Cargando solicitudes...</p>
+              ) : pendingRequests.length === 0 ? (
+                <p style={{ textAlign: "center", color: colors.text }}>No hay solicitudes pendientes 😊</p>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+                  {pendingRequests.map((request) => (
+                    <div
+                      key={request._id}
+                      style={{
+                        background: "white",
+                        padding: "20px",
+                        borderRadius: "10px",
+                        boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+                      }}
+                    >
+                      <div style={{ marginBottom: "15px" }}>
+                        <h4 style={{ color: colors.text, marginBottom: "10px" }}>
+                          Pasajero: {request.passengerName}
+                        </h4>
+                        {request.tripDetails && (
+                          <>
+                            <p style={{ margin: "5px 0", color: colors.text }}>
+                              <strong>Viaje:</strong> {request.tripDetails.desde} → {request.tripDetails.para}
+                            </p>
+                            <p style={{ margin: "5px 0", color: colors.text }}>
+                              <strong>Sector:</strong> {request.tripDetails.sector}
+                            </p>
+                            <p style={{ margin: "5px 0", color: colors.text }}>
+                              <strong>Hora de salida:</strong> {request.tripDetails.horaSalida}
+                            </p>
+                            <p style={{ margin: "5px 0", color: colors.text }}>
+                              <strong>Valor:</strong> ${typeof request.tripDetails.valor === 'number' 
+                                ? request.tripDetails.valor.toLocaleString() 
+                                : request.tripDetails.valor || "0"}
+                            </p>
+                            <p style={{ margin: "5px 0", color: colors.text }}>
+                              <strong>Dirección de recogida:</strong> {request.pickupAddress || "No especificada"}
+                            </p>
+                            <p style={{ margin: "5px 0", color: colors.text }}>
+                              <strong>Email:</strong> {request.passengerEmail}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                      <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+                        <button
+                          onClick={() => handleRequestAction(request._id, "reject")}
+                          style={{
+                            backgroundColor: "#e74c3c",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "8px",
+                            padding: "10px 20px",
+                            cursor: "pointer",
+                            fontWeight: "600",
+                            transition: "background-color 0.3s",
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#c0392b"}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#e74c3c"}
+                        >
+                          Rechazar
+                        </button>
+                        <button
+                          onClick={() => handleRequestAction(request._id, "accept")}
+                          style={{
+                            backgroundColor: "#2ecc71",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "8px",
+                            padding: "10px 20px",
+                            cursor: "pointer",
+                            fontWeight: "600",
+                            transition: "background-color 0.3s",
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#27ae60"}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#2ecc71"}
+                        >
+                          Aceptar
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
 
           {activeTab === "reserved" && (
