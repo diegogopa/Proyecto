@@ -457,6 +457,52 @@ function Home() {
       }
     }, []);
 
+    // Función para cambiar a conductor - verifica si tiene carro registrado
+    const handleSwitchToDriver = async () => {
+        try {
+            const storedUser = JSON.parse(localStorage.getItem("user"));
+            if (!storedUser) {
+                alert("No se encontró la sesión del usuario. Por favor, inicia sesión.");
+                navigate("/login");
+                return;
+            }
+
+            // Primero verificar en localStorage si tiene carro registrado
+            if (storedUser.placa && storedUser.placa.trim() !== "") {
+                // Ya tiene carro registrado, ir directo a HomeDriver
+                navigate("/home-driver");
+                return;
+            }
+
+            // Si no tiene carro en localStorage, verificar en el backend
+            if (storedUser.email) {
+                const res = await fetch(`https://proyecto5-vs2l.onrender.com/api/users/${storedUser.email}`, {
+                    method: "GET",
+                    headers: { "Content-Type": "application/json" },
+                });
+
+                if (res.ok) {
+                    const userData = await res.json();
+                    // Verificar si tiene carro completo registrado
+                    if (userData.placa && userData.placa.trim() !== "") {
+                        // Actualizar localStorage con los datos del usuario
+                        localStorage.setItem("user", JSON.stringify(userData));
+                        // Ya tiene carro, ir a HomeDriver
+                        navigate("/home-driver");
+                        return;
+                    }
+                }
+            }
+
+            // No tiene carro registrado, ir a CarQuestion
+            navigate("/car-question");
+        } catch (error) {
+            console.error("Error al verificar carro del usuario:", error);
+            // En caso de error, ir a CarQuestion
+            navigate("/car-question");
+        }
+    };
+
     if (isReserving && selectedTrip) {
         return (
             <HomeContainer>
@@ -482,7 +528,7 @@ return (
                         onClick={() => setMenuOpen(!menuOpen)}
                     />
                     {/* ✅ Aquí el cambio solicitado */}
-                    <SwitchButton onClick={() => navigate('/car-question')}>
+                    <SwitchButton onClick={handleSwitchToDriver}>
                         Cambiar a Conductor
                     </SwitchButton>
                     <DropdownMenu open={menuOpen}>
