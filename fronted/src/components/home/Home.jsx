@@ -467,34 +467,68 @@ function Home() {
                 return;
             }
 
+            console.log("Usuario en localStorage:", storedUser);
+
             // Primero verificar en localStorage si tiene carro registrado
             if (storedUser.placa && storedUser.placa.trim() !== "") {
+                console.log("Usuario tiene carro en localStorage, redirigiendo a home-driver");
                 // Ya tiene carro registrado, ir directo a HomeDriver
                 navigate("/home-driver");
                 return;
             }
 
             // Si no tiene carro en localStorage, verificar en el backend
-            if (storedUser.email) {
-                const res = await fetch(`https://proyecto5-vs2l.onrender.com/api/users/${storedUser.email}`, {
+            // Intentar con email primero, luego con _id si no hay email
+            let userEmail = storedUser.email;
+            
+            if (!userEmail && storedUser._id) {
+                // Si no hay email, intentar obtener el usuario por _id
+                // Primero necesitamos obtener el usuario del backend para tener el email
+                console.log("No hay email, intentando obtener datos del usuario por _id");
+            }
+
+            if (userEmail) {
+                console.log("Verificando en backend con email:", userEmail);
+                const res = await fetch(`https://proyecto5-vs2l.onrender.com/api/users/${userEmail}`, {
                     method: "GET",
                     headers: { "Content-Type": "application/json" },
                 });
 
                 if (res.ok) {
                     const userData = await res.json();
-                    // Verificar si tiene carro completo registrado
-                    if (userData.placa && userData.placa.trim() !== "") {
+                    console.log("Datos del usuario desde backend:", userData);
+                    
+                    // Verificar si tiene carro completo registrado (placa, marca, modelo, cupos)
+                    const hasCarComplete = userData.placa && 
+                                          userData.placa.trim() !== "" && 
+                                          userData.marca && 
+                                          userData.marca.trim() !== "" && 
+                                          userData.modelo && 
+                                          userData.modelo.trim() !== "" &&
+                                          userData.cupos > 0;
+
+                    if (hasCarComplete) {
+                        console.log("Usuario tiene carro completo, redirigiendo a home-driver");
                         // Actualizar localStorage con los datos del usuario
                         localStorage.setItem("user", JSON.stringify(userData));
                         // Ya tiene carro, ir a HomeDriver
                         navigate("/home-driver");
                         return;
+                    } else {
+                        console.log("Usuario no tiene carro completo, datos:", {
+                            placa: userData.placa,
+                            marca: userData.marca,
+                            modelo: userData.modelo,
+                            cupos: userData.cupos
+                        });
                     }
+                } else {
+                    console.error("Error al obtener usuario del backend:", res.status);
                 }
             }
 
             // No tiene carro registrado, ir a CarQuestion
+            console.log("Usuario no tiene carro, redirigiendo a car-question");
             navigate("/car-question");
         } catch (error) {
             console.error("Error al verificar carro del usuario:", error);

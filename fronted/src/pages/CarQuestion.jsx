@@ -54,8 +54,54 @@ const CarQuestion = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const userEmail = localStorage.getItem("userEmail");
-    if (!userEmail) navigate("/login");
+    // Verificar si el usuario ya tiene carro registrado al cargar el componente
+    const checkUserCar = async () => {
+      try {
+        const storedUser = JSON.parse(localStorage.getItem("user"));
+        
+        // Primero verificar en localStorage
+        if (storedUser && storedUser.placa && storedUser.placa.trim() !== "") {
+          const hasCarComplete = storedUser.placa?.trim() &&
+                                 storedUser.marca?.trim() &&
+                                 storedUser.modelo?.trim() &&
+                                 storedUser.cupos > 0;
+          
+          if (hasCarComplete) {
+            console.log("Usuario ya tiene carro en localStorage, redirigiendo a home-driver");
+            navigate("/home-driver");
+            return;
+          }
+        }
+
+        // Si no está en localStorage, verificar en el backend
+        const userEmail = storedUser?.email || localStorage.getItem("userEmail");
+        if (!userEmail) {
+          navigate("/login");
+          return;
+        }
+
+        const res = await axios.get(`${API_BASE_URL}/users/${userEmail}`);
+        const user = res.data;
+
+        // ✅ Validar que todos los campos del carro estén completos
+        const hasCarComplete = user.placa?.trim() &&
+                              user.marca?.trim() &&
+                              user.modelo?.trim() &&
+                              user.cupos > 0;
+
+        if (hasCarComplete) {
+          console.log("Usuario ya tiene carro en backend, redirigiendo a home-driver");
+          // Actualizar localStorage
+          localStorage.setItem("user", JSON.stringify(user));
+          navigate("/home-driver");
+        }
+      } catch (error) {
+        console.error("Error al verificar carro del usuario:", error);
+        // Si hay error, dejar que el usuario continúe con el flujo normal
+      }
+    };
+
+    checkUserCar();
   }, [navigate]);
 
   const handleNext = async () => {
