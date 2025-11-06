@@ -394,7 +394,7 @@ function Home() {
         }
     }, [activeTab]);
 
-    // Función para cancelar una reserva
+    // Función para cancelar una reserva (aumenta cupos)
     const handleCancelReservation = async (reservationId) => {
         if (!window.confirm("¿Estás seguro de que quieres cancelar esta reserva?")) {
             return;
@@ -438,6 +438,53 @@ function Home() {
         } catch (error) {
             console.error("Error canceling reservation:", error);
             alert("Error al cancelar la reserva. Por favor, intenta nuevamente.");
+        }
+    };
+
+    // Función para borrar una reserva rechazada (no aumenta cupos)
+    const handleDeleteRejectedReservation = async (reservationId) => {
+        if (!window.confirm("¿Estás seguro de que quieres eliminar esta reserva rechazada?")) {
+            return;
+        }
+
+        try {
+            const storedUser = JSON.parse(localStorage.getItem("user"));
+            if (!storedUser?._id) {
+                alert("No se encontró la sesión del usuario. Inicia sesión nuevamente.");
+                return;
+            }
+
+            const res = await fetch(`https://proyecto5-vs2l.onrender.com/api/reservations/${reservationId}/delete`, {
+                method: "DELETE",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    userId: storedUser._id,
+                }),
+            });
+
+            if (res.ok) {
+                // Recargar las reservas
+                const refreshRes = await fetch(`https://proyecto5-vs2l.onrender.com/api/users/${storedUser._id}/reservations`, {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                });
+
+                if (refreshRes.ok) {
+                    const data = await refreshRes.json();
+                    setReservations(data.reservations || []);
+                }
+                alert("Reserva eliminada exitosamente");
+            } else {
+                const errorData = await res.json();
+                alert(errorData.message || "Error al eliminar la reserva. Por favor, intenta nuevamente.");
+            }
+        } catch (error) {
+            console.error("Error deleting rejected reservation:", error);
+            alert("Error al eliminar la reserva. Por favor, intenta nuevamente.");
         }
     };
 
@@ -688,7 +735,7 @@ return (
                                         </div>
                                         <button
                                             style={{
-                                                background: colors.primary,
+                                                background: reservation.status === "Rechazada" ? "#e74c3c" : colors.primary,
                                                 color: "white",
                                                 border: "none",
                                                 borderRadius: "6px",
@@ -696,9 +743,15 @@ return (
                                                 cursor: "pointer",
                                                 fontWeight: "600",
                                             }}
-                                            onClick={() => handleCancelReservation(reservation._id)}
+                                            onClick={() => {
+                                                if (reservation.status === "Rechazada") {
+                                                    handleDeleteRejectedReservation(reservation._id);
+                                                } else {
+                                                    handleCancelReservation(reservation._id);
+                                                }
+                                            }}
                                         >
-                                            Cancelar
+                                            {reservation.status === "Rechazada" ? "Borrar" : "Cancelar"}
                                         </button>
                                     </div>
                                 ) : null
