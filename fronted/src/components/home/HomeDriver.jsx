@@ -365,16 +365,72 @@ function HomeDriver() {
   };
 
   // Eliminar viaje
-  const handleDeleteTrip = (index) => {
-    const storedUser = JSON.parse(localStorage.getItem("user"));
-    if (!storedUser?.trips) return;
+  const handleDeleteTrip = async (tripId, index) => {
+    if (!window.confirm("¿Estás seguro de que quieres eliminar este viaje?")) {
+      return;
+    }
 
-    const updatedTrips = [...storedUser.trips];
-    updatedTrips.splice(index, 1);
-    storedUser.trips = updatedTrips;
+    try {
+      const storedUser = JSON.parse(localStorage.getItem("user"));
+      if (!storedUser?._id) {
+        alert("Usuario no encontrado 😢");
+        return;
+      }
 
-    localStorage.setItem("user", JSON.stringify(storedUser));
-    setTrips(updatedTrips);
+      // Si no se proporciona tripId, intentar obtenerlo del índice
+      let tripToDelete = tripId;
+      if (!tripToDelete && storedUser.trips && storedUser.trips[index]) {
+        tripToDelete = storedUser.trips[index]._id;
+      }
+
+      if (!tripToDelete) {
+        alert("No se pudo identificar el viaje a eliminar");
+        return;
+      }
+
+      // Eliminar el trip del backend
+      const res = await fetch(`https://proyecto5-vs2l.onrender.com/api/trips/${tripToDelete}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: storedUser._id,
+        }),
+      });
+
+      if (res.ok) {
+        // Recargar los viajes desde el backend para asegurar que estén actualizados
+        const refreshRes = await fetch(`https://proyecto5-vs2l.onrender.com/api/trips/${storedUser._id}`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+
+        if (refreshRes.ok) {
+          const refreshData = await refreshRes.json();
+          const updatedTrips = refreshData.trips || [];
+          setTrips(updatedTrips);
+
+          // Actualizar localStorage
+          storedUser.trips = updatedTrips;
+          localStorage.setItem("user", JSON.stringify(storedUser));
+        } else {
+          // Si falla la recarga, actualizar localmente
+          const updatedTrips = trips.filter((trip, i) => i !== index);
+          setTrips(updatedTrips);
+          storedUser.trips = updatedTrips;
+          localStorage.setItem("user", JSON.stringify(storedUser));
+        }
+
+        alert("Viaje eliminado exitosamente ✅");
+      } else {
+        const errorData = await res.json();
+        alert(errorData.message || "Error al eliminar el viaje. Por favor, intenta nuevamente.");
+      }
+    } catch (error) {
+      console.error("Error deleting trip:", error);
+      alert("Error al eliminar el viaje. Por favor, intenta nuevamente.");
+    }
   };
 
   const handleSubmit = async (tripData) => {
@@ -651,7 +707,7 @@ function HomeDriver() {
                       <p><strong>Cupos:</strong> {trip.cupos}</p>
                     </div>
                     <button 
-                      onClick={() => handleDeleteTrip(index)} 
+                      onClick={() => handleDeleteTrip(trip._id, index)} 
                       style={{
                         backgroundColor: "#0B3D91", // azul oscuro
                         color: colors.white,

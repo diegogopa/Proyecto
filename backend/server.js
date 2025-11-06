@@ -721,6 +721,57 @@ app.delete("/api/reservations/:reservationId", async (req, res) => {
   }
 });
 
+// ✅ Eliminar un trip del conductor
+app.delete("/api/trips/:tripId", async (req, res) => {
+  try {
+    const { tripId } = req.params;
+    const { userId } = req.body || req.query;
+
+    if (!tripId) {
+      return res.status(400).json({ message: "Falta el ID del trip" });
+    }
+
+    if (!userId) {
+      return res.status(400).json({ message: "Falta el ID del usuario" });
+    }
+
+    // Convertir tripId a ObjectId
+    let tripObjectId;
+    if (mongoose.Types.ObjectId.isValid(tripId)) {
+      tripObjectId = new mongoose.Types.ObjectId(tripId);
+    } else {
+      return res.status(400).json({ message: "ID de trip inválido" });
+    }
+
+    // Buscar el usuario conductor
+    const driver = await User.findById(userId);
+    if (!driver) {
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
+
+    // Buscar el trip en los viajes del conductor
+    const trip = driver.trips.id(tripObjectId);
+    if (!trip) {
+      return res.status(404).json({ message: "Trip no encontrado" });
+    }
+
+    // Eliminar el trip
+    driver.trips.pull(tripObjectId);
+    await driver.save();
+
+    res.status(200).json({
+      message: "Trip eliminado exitosamente",
+      tripId: tripId,
+    });
+  } catch (err) {
+    console.error("❌ Error en DELETE /api/trips/:tripId:", err);
+    res.status(500).json({ 
+      message: "Error en servidor", 
+      error: err.message 
+    });
+  }
+});
+
 // ✅ Borrar una reserva rechazada (eliminar sin aumentar cupos)
 app.delete("/api/reservations/:reservationId/delete", async (req, res) => {
   try {
