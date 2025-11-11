@@ -394,9 +394,16 @@ function Home() {
         }
     }, [activeTab]);
 
-    // Función para cancelar una reserva
+    // Función para cancelar/borrar una reserva
     const handleCancelReservation = async (reservationId) => {
-        if (!window.confirm("¿Estás seguro de que quieres cancelar esta reserva?")) {
+        // Buscar la reserva para determinar el mensaje
+        const reservation = reservations.find(r => r._id === reservationId);
+        const isRejected = reservation?.status === "Rechazada";
+        const confirmMessage = isRejected 
+            ? "¿Estás seguro de que quieres borrar esta reserva rechazada? Los cupos se devolverán al viaje."
+            : "¿Estás seguro de que quieres cancelar esta reserva?";
+        
+        if (!window.confirm(confirmMessage)) {
             return;
         }
 
@@ -430,7 +437,10 @@ function Home() {
                     const data = await refreshRes.json();
                     setReservations(data.reservations || []);
                 }
-                alert("Reserva cancelada exitosamente");
+                const successMessage = isRejected 
+                    ? "Reserva borrada exitosamente. Los cupos han sido devueltos al viaje."
+                    : "Reserva cancelada exitosamente";
+                alert(successMessage);
             } else {
                 const errorData = await res.json();
                 alert(errorData.message || "Error al cancelar la reserva. Por favor, intenta nuevamente.");
@@ -594,24 +604,56 @@ return (
                                                     ? reservation.tripDetails.valor.toLocaleString() 
                                                     : reservation.tripDetails.valor || "0"}
                                             </p>
-                                            <p style={{ margin: "8px 0", color: colors.text, fontSize: "0.9rem" }}>
+                                            <p style={{ 
+                                                margin: "8px 0", 
+                                                fontSize: "0.9rem",
+                                                fontWeight: "600",
+                                                color: reservation.status === "Aceptada" 
+                                                    ? "#2ecc71" // Verde
+                                                    : reservation.status === "Rechazada" 
+                                                    ? "#e74c3c" // Rojo
+                                                    : "#f39c12" // Amarillo para Pendiente
+                                            }}>
                                                 Estado: {reservation.status}
                                             </p>
                                         </div>
-                                        <button
-                                            style={{
-                                                background: colors.primary,
-                                                color: "white",
-                                                border: "none",
-                                                borderRadius: "6px",
-                                                padding: "8px 16px",
-                                                cursor: "pointer",
-                                                fontWeight: "600",
-                                            }}
-                                            onClick={() => handleCancelReservation(reservation._id)}
-                                        >
-                                            Cancelar
-                                        </button>
+                                        {reservation.status === "Rechazada" ? (
+                                            <button
+                                                style={{
+                                                    background: "#e74c3c",
+                                                    color: "white",
+                                                    border: "none",
+                                                    borderRadius: "6px",
+                                                    padding: "8px 16px",
+                                                    cursor: "pointer",
+                                                    fontWeight: "600",
+                                                    transition: "background-color 0.3s",
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#c0392b"}
+                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#e74c3c"}
+                                                onClick={() => handleCancelReservation(reservation._id)}
+                                            >
+                                                Borrar
+                                            </button>
+                                        ) : (
+                                            <button
+                                                style={{
+                                                    background: colors.primary,
+                                                    color: "white",
+                                                    border: "none",
+                                                    borderRadius: "6px",
+                                                    padding: "8px 16px",
+                                                    cursor: "pointer",
+                                                    fontWeight: "600",
+                                                    transition: "background-color 0.3s",
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#4a5d72"}
+                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.primary}
+                                                onClick={() => handleCancelReservation(reservation._id)}
+                                            >
+                                                Cancelar
+                                            </button>
+                                        )}
                                     </div>
                                 ) : null
                             ))}

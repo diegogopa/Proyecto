@@ -672,37 +672,13 @@ app.put("/api/reservations/:reservationId/status", async (req, res) => {
       return res.status(403).json({ message: "No tienes permiso para modificar esta reserva" });
     }
 
-    // Si se rechaza, devolver los cupos al trip (solo si estaba pendiente)
-    // Nota: Los cupos ya fueron restados cuando se creó la reserva
-    if (status === "Rechazada" && reservation.status === "Pendiente") {
-      const driver = await User.findById(driverId);
-      if (driver) {
-        const trip = driver.trips.id(reservation.tripId);
-        if (trip) {
-          const numberOfSeats = reservation.numberOfSeats || 1;
-          trip.cupos = trip.cupos + numberOfSeats;
-          await driver.save();
-        }
-      }
-    }
+    // IMPORTANTE: Cuando se rechaza, NO devolvemos los cupos automáticamente
+    // El pasajero debe borrar la reserva manualmente para que se devuelvan los cupos
+    // Esto evita que se reinicien los cupos sin que el pasajero lo sepa
 
-    // Si se acepta una reserva que estaba rechazada, restar los cupos nuevamente
-    // (porque cuando se rechazó, los cupos fueron devueltos)
-    if (status === "Aceptada" && reservation.status === "Rechazada") {
-      const driver = await User.findById(driverId);
-      if (driver) {
-        const trip = driver.trips.id(reservation.tripId);
-        if (trip) {
-          const numberOfSeats = reservation.numberOfSeats || 1;
-          if (trip.cupos >= numberOfSeats) {
-            trip.cupos = trip.cupos - numberOfSeats;
-            await driver.save();
-          } else {
-            return res.status(400).json({ message: "No hay suficientes cupos disponibles" });
-          }
-        }
-      }
-    }
+    // Si se acepta una reserva que estaba rechazada, no hacer nada con los cupos
+    // porque cuando se rechazó, los cupos NO fueron devueltos (siguen restados)
+    // Los cupos solo se devuelven cuando el pasajero borra la reserva rechazada
 
     // Si se acepta una reserva que estaba pendiente, no hacer nada con los cupos
     // porque ya fueron restados cuando se creó la reserva
