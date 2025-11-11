@@ -608,9 +608,12 @@ function HomeDriver() {
                     >
                       <div style={{ marginBottom: "15px" }}>
                         <h4 style={{ color: colors.text, marginBottom: "10px" }}>
-                          Pasajero: {request.passengerName}
+                          Pasajero: {request.passengerName || "Sin nombre"}
                         </h4>
-                        {request.tripDetails && (
+                        <p style={{ margin: "5px 0", color: colors.text }}>
+                          <strong>Email:</strong> {request.passengerEmail || "No especificado"}
+                        </p>
+                        {request.tripDetails ? (
                           <>
                             <p style={{ margin: "5px 0", color: colors.text }}>
                               <strong>Viaje:</strong> {request.tripDetails.desde} → {request.tripDetails.para}
@@ -629,10 +632,16 @@ function HomeDriver() {
                             <p style={{ margin: "5px 0", color: colors.text }}>
                               <strong>Dirección de recogida:</strong> {request.pickupAddress || "No especificada"}
                             </p>
-                            <p style={{ margin: "5px 0", color: colors.text }}>
-                              <strong>Email:</strong> {request.passengerEmail}
-                            </p>
+                            {request.numberOfSeats > 1 && (
+                              <p style={{ margin: "5px 0", color: colors.text }}>
+                                <strong>Cupos solicitados:</strong> {request.numberOfSeats}
+                              </p>
+                            )}
                           </>
+                        ) : (
+                          <p style={{ margin: "5px 0", color: colors.details }}>
+                            <em>Detalles del viaje no disponibles</em>
+                          </p>
                         )}
                       </div>
                       <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>

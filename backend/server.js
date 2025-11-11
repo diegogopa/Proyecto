@@ -539,6 +539,194 @@ app.delete("/api/reservations/:reservationId", async (req, res) => {
   }
 });
 
+// ✅ Obtener solicitudes pendientes de un conductor
+app.get("/api/drivers/:driverId/pending-requests", async (req, res) => {
+  try {
+    const { driverId } = req.params;
+
+    if (!driverId) {
+      return res.status(400).json({ message: "Falta el ID del conductor" });
+    }
+
+    // Convertir driverId a ObjectId
+    let driverObjectId;
+    if (mongoose.Types.ObjectId.isValid(driverId)) {
+      driverObjectId = new mongoose.Types.ObjectId(driverId);
+    } else {
+      return res.status(400).json({ message: "ID de conductor inválido" });
+    }
+
+    // Buscar todos los usuarios que tengan reservas con este driverUserId y status "Pendiente"
+    const allUsers = await User.find({});
+    const pendingRequests = [];
+
+    for (const user of allUsers) {
+      if (user.reservations && Array.isArray(user.reservations)) {
+        for (const reservation of user.reservations) {
+          // Verificar si la reserva es para este conductor y está pendiente
+          if (
+            reservation.driverUserId &&
+            reservation.driverUserId.toString() === driverObjectId.toString() &&
+            reservation.status === "Pendiente"
+          ) {
+            // Buscar el conductor para obtener los detalles del trip
+            const driver = await User.findById(driverObjectId);
+            if (!driver) continue;
+
+            // Buscar el trip específico
+            const trip = driver.trips.id(reservation.tripId);
+            if (!trip) continue;
+
+            // Construir el objeto de solicitud pendiente
+            pendingRequests.push({
+              _id: reservation._id,
+              tripId: reservation.tripId,
+              driverUserId: reservation.driverUserId,
+              passengerId: user._id,
+              passengerName: `${user.nombre || ""} ${user.apellido || ""}`.trim() || "Pasajero",
+              passengerEmail: user.email || "",
+              numberOfSeats: reservation.numberOfSeats || 1,
+              pickupAddress: reservation.pickupAddress || reservation.pickupAddresses?.[0] || "No especificada",
+              pickupAddresses: reservation.pickupAddresses || [],
+              status: reservation.status,
+              createdAt: reservation.createdAt,
+              tripDetails: {
+                desde: trip.fromLocation,
+                para: trip.toLocation,
+                horaSalida: trip.departureTime,
+                valor: trip.price,
+                sector: trip.sector,
+              },
+            });
+          }
+        }
+      }
+    }
+
+    res.status(200).json({
+      requests: pendingRequests,
+    });
+  } catch (err) {
+    console.error("❌ Error en GET /api/drivers/:driverId/pending-requests:", err);
+    res.status(500).json({
+      message: "Error en servidor",
+      error: err.message,
+    });
+  }
+});
+
+// ✅ Actualizar el estado de una reserva (aceptar o rechazar)
+app.put("/api/reservations/:reservationId/status", async (req, res) => {
+  try {
+    const { reservationId } = req.params;
+    const { status, driverId } = req.body;
+
+    if (!reservationId) {
+      return res.status(400).json({ message: "Falta el ID de la reserva" });
+    }
+
+    if (!status) {
+      return res.status(400).json({ message: "Falta el estado" });
+    }
+
+    if (!driverId) {
+      return res.status(400).json({ message: "Falta el ID del conductor" });
+    }
+
+    // Validar que el estado sea válido
+    const validStatuses = ["Aceptada", "Rechazada", "Pendiente"];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ message: "Estado inválido" });
+    }
+
+    // Convertir reservationId a ObjectId
+    let reservationObjectId;
+    if (mongoose.Types.ObjectId.isValid(reservationId)) {
+      reservationObjectId = new mongoose.Types.ObjectId(reservationId);
+    } else {
+      return res.status(400).json({ message: "ID de reserva inválido" });
+    }
+
+    // Buscar el usuario pasajero que tiene esta reserva
+    const allUsers = await User.find({});
+    let passenger = null;
+    let reservation = null;
+
+    for (const user of allUsers) {
+      if (user.reservations && Array.isArray(user.reservations)) {
+        const foundReservation = user.reservations.id(reservationObjectId);
+        if (foundReservation) {
+          passenger = user;
+          reservation = foundReservation;
+          break;
+        }
+      }
+    }
+
+    if (!passenger || !reservation) {
+      return res.status(404).json({ message: "Reserva no encontrada" });
+    }
+
+    // Verificar que el conductor sea el correcto
+    if (reservation.driverUserId.toString() !== driverId) {
+      return res.status(403).json({ message: "No tienes permiso para modificar esta reserva" });
+    }
+
+    // Si se rechaza, devolver los cupos al trip (solo si estaba pendiente)
+    // Nota: Los cupos ya fueron restados cuando se creó la reserva
+    if (status === "Rechazada" && reservation.status === "Pendiente") {
+      const driver = await User.findById(driverId);
+      if (driver) {
+        const trip = driver.trips.id(reservation.tripId);
+        if (trip) {
+          const numberOfSeats = reservation.numberOfSeats || 1;
+          trip.cupos = trip.cupos + numberOfSeats;
+          await driver.save();
+        }
+      }
+    }
+
+    // Si se acepta una reserva que estaba rechazada, restar los cupos nuevamente
+    // (porque cuando se rechazó, los cupos fueron devueltos)
+    if (status === "Aceptada" && reservation.status === "Rechazada") {
+      const driver = await User.findById(driverId);
+      if (driver) {
+        const trip = driver.trips.id(reservation.tripId);
+        if (trip) {
+          const numberOfSeats = reservation.numberOfSeats || 1;
+          if (trip.cupos >= numberOfSeats) {
+            trip.cupos = trip.cupos - numberOfSeats;
+            await driver.save();
+          } else {
+            return res.status(400).json({ message: "No hay suficientes cupos disponibles" });
+          }
+        }
+      }
+    }
+
+    // Si se acepta una reserva que estaba pendiente, no hacer nada con los cupos
+    // porque ya fueron restados cuando se creó la reserva
+
+    // Actualizar el estado de la reserva
+    reservation.status = status;
+    await passenger.save();
+
+    res.status(200).json({
+      message: `Solicitud ${status.toLowerCase()} exitosamente`,
+      reservation: {
+        _id: reservation._id,
+        status: reservation.status,
+      },
+    });
+  } catch (err) {
+    console.error("❌ Error en PUT /api/reservations/:reservationId/status:", err);
+    res.status(500).json({
+      message: "Error en servidor",
+      error: err.message,
+    });
+  }
+});
+
 // ✅ Ruta raíz
 app.get("/", (req, res) => {
   res.send("✅ Backend funcionando 🚀");
