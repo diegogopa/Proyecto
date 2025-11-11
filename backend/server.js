@@ -503,32 +503,68 @@ app.delete("/api/reservations/:reservationId", async (req, res) => {
       return res.status(404).json({ message: "Reserva no encontrada" });
     }
 
-    // Guardar el tripId, driverUserId y numberOfSeats antes de eliminar
+    // Guardar el tripId, driverUserId, numberOfSeats y status antes de eliminar
     const tripId = reservation.tripId;
     const driverUserId = reservation.driverUserId;
     const numberOfSeats = reservation.numberOfSeats || 1; // Por defecto 1 para compatibilidad
+    const reservationStatus = reservation.status;
+
+    console.log(`🗑️ Eliminando reserva ${reservationId}:`);
+    console.log(`   - Estado: ${reservationStatus}`);
+    console.log(`   - Cupos a devolver: ${numberOfSeats}`);
+    console.log(`   - TripId: ${tripId}`);
+    console.log(`   - DriverId: ${driverUserId}`);
 
     // Eliminar la reserva del pasajero
     passenger.reservations.pull(reservationObjectId);
     await passenger.save();
 
     // Buscar el conductor y aumentar los cupos del viaje
+    // IMPORTANTE: Siempre devolvemos los cupos, independientemente del estado
+    // porque los cupos fueron restados cuando se creó la reserva
     const driver = await User.findById(driverUserId);
-    if (driver) {
-      // El tripId ya es un ObjectId, pero necesitamos asegurarnos de que sea válido
-      if (mongoose.Types.ObjectId.isValid(tripId)) {
-        const trip = driver.trips.id(tripId);
-        if (trip) {
-          // Aumentar los cupos según el número de cupos reservados
-          trip.cupos = trip.cupos + numberOfSeats;
-          await driver.save();
-        }
-      }
+    if (!driver) {
+      console.error(`❌ Conductor no encontrado: ${driverUserId}`);
+      return res.status(404).json({ message: "Conductor no encontrado" });
     }
 
+    // Convertir tripId a ObjectId si es necesario
+    let tripObjectId;
+    if (tripId instanceof mongoose.Types.ObjectId) {
+      tripObjectId = tripId;
+    } else if (mongoose.Types.ObjectId.isValid(tripId)) {
+      tripObjectId = new mongoose.Types.ObjectId(tripId);
+    } else {
+      console.error(`❌ TripId inválido: ${tripId}`);
+      return res.status(400).json({ message: "ID de trip inválido" });
+    }
+
+    // Buscar el trip en el conductor
+    const trip = driver.trips.id(tripObjectId);
+    if (!trip) {
+      console.error(`❌ Trip no encontrado en el conductor: ${tripObjectId}`);
+      return res.status(404).json({ message: "Viaje no encontrado" });
+    }
+
+    // Guardar los cupos antes de aumentar
+    const cuposAntes = trip.cupos;
+    
+    // Aumentar los cupos según el número de cupos reservados
+    trip.cupos = trip.cupos + numberOfSeats;
+    await driver.save();
+
+    console.log(`✅ Cupos devueltos: ${cuposAntes} → ${trip.cupos} (+${numberOfSeats})`);
+
+    const message = reservationStatus === "Rechazada" 
+      ? "Reserva borrada exitosamente. Los cupos han sido devueltos al viaje."
+      : "Reserva cancelada exitosamente. Los cupos han sido devueltos al viaje.";
+
     res.status(200).json({
-      message: "Reserva cancelada exitosamente",
+      message: message,
       reservationId: reservationId,
+      cuposDevueltos: numberOfSeats,
+      cuposAnteriores: cuposAntes,
+      cuposActuales: trip.cupos,
     });
   } catch (err) {
     console.error("❌ Error en DELETE /api/reservations/:reservationId:", err);
