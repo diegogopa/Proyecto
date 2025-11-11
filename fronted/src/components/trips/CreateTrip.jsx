@@ -163,7 +163,10 @@ return (
             
             <MapWrapper>
                 <MapComponent 
-                    onAddressSelect={handleAddressSelected} 
+                    onAddressSelect={handleAddressSelected}
+                    origin={formData.fromLocation || null}
+                    destination={formData.toLocation || null}
+                    currentSelection={currentSelection}
                 />
             </MapWrapper>
 

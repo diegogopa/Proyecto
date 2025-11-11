@@ -1,6 +1,6 @@
 // src/components/common/MapComponent.jsx
-import React, { useState, useCallback } from 'react';
-import { GoogleMap, Autocomplete, Marker } from '@react-google-maps/api';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { GoogleMap, Autocomplete, Marker, DirectionsRenderer } from '@react-google-maps/api';
 import styled from 'styled-components';
 import { useGoogleMaps } from './GoogleMapsProvider'; 
 
@@ -13,16 +13,97 @@ const MapContainer = styled.div`
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 `;
 
-// Modificar las props para aceptar onAddressSelect
-const MapComponent = ({ onAddressSelect }) => { 
+// Modificar las props para aceptar onAddressSelect, origin y destination
+const MapComponent = ({ onAddressSelect, origin, destination, currentSelection }) => { 
     const { services, isLoaded, loadError } = useGoogleMaps();
     const [autocomplete, setAutocomplete] = useState(null);
     const [place, setPlace] = useState(null);
-    const [center, setCenter] = useState({ lat: 4.7110, lng: -74.0721 }); 
+    const [center, setCenter] = useState({ lat: 4.7110, lng: -74.0721 });
+    const [originCoords, setOriginCoords] = useState(null);
+    const [destinationCoords, setDestinationCoords] = useState(null);
+    const [directionsResponse, setDirectionsResponse] = useState(null);
+    const [routeError, setRouteError] = useState(null);
+    const directionsRendererRef = useRef(null);
+    const mapRef = useRef(null);
 
     const onLoad = (autocompleteInstance) => {
         setAutocomplete(autocompleteInstance);
     };
+
+    // Función para geocodificar una dirección y obtener coordenadas
+    const geocodeAddress = useCallback((address, callback) => {
+        if (!services.geocoder || !address) return;
+        
+        services.geocoder.geocode({ address }, (results, status) => {
+            if (status === 'OK' && results[0]) {
+                const location = {
+                    lat: results[0].geometry.location.lat(),
+                    lng: results[0].geometry.location.lng(),
+                };
+                callback(location);
+            } else {
+                console.error('Error en geocodificación:', status);
+                callback(null);
+            }
+        });
+    }, [services.geocoder]);
+
+    // Efecto para actualizar coordenadas cuando cambian origin o destination
+    useEffect(() => {
+        if (origin) {
+            geocodeAddress(origin, (coords) => {
+                if (coords) {
+                    setOriginCoords(coords);
+                }
+            });
+        } else {
+            setOriginCoords(null);
+        }
+
+        if (destination) {
+            geocodeAddress(destination, (coords) => {
+                if (coords) {
+                    setDestinationCoords(coords);
+                }
+            });
+        } else {
+            setDestinationCoords(null);
+        }
+    }, [origin, destination, geocodeAddress]);
+
+    // Efecto para calcular la ruta cuando ambos puntos estén disponibles
+    useEffect(() => {
+        if (originCoords && destinationCoords && services.directionsService) {
+            setRouteError(null);
+            
+            const request = {
+                origin: originCoords,
+                destination: destinationCoords,
+                travelMode: window.google.maps.TravelMode.DRIVING,
+            };
+
+            services.directionsService.route(request, (result, status) => {
+                if (status === 'OK') {
+                    setDirectionsResponse(result);
+                    // Ajustar el zoom para mostrar toda la ruta
+                    if (mapRef.current && result.routes && result.routes[0]) {
+                        const bounds = new window.google.maps.LatLngBounds();
+                        result.routes[0].legs.forEach((leg) => {
+                            bounds.extend(leg.start_location);
+                            bounds.extend(leg.end_location);
+                        });
+                        mapRef.current.fitBounds(bounds);
+                    }
+                } else {
+                    console.error('Error al calcular la ruta:', status);
+                    setRouteError('No se pudo calcular la ruta');
+                    setDirectionsResponse(null);
+                }
+            });
+        } else {
+            setDirectionsResponse(null);
+        }
+    }, [originCoords, destinationCoords, services.directionsService]);
 
     const handleMapClick = useCallback((event) => {
         if (!services.geocoder) return; // Si el geocodificador no está cargado, salir
@@ -79,6 +160,11 @@ const MapComponent = ({ onAddressSelect }) => {
         }
     };
 
+    // Callback para cuando DirectionsRenderer se carga
+    const onDirectionsRendererLoad = useCallback((directionsRenderer) => {
+        directionsRendererRef.current = directionsRenderer;
+    }, []);
+
     if (loadError) return <div>Error al cargar Google Maps. Verifica tu clave de API.</div>;
     if (!isLoaded) return <div>Cargando Mapa...</div>;
 
@@ -89,6 +175,15 @@ const MapComponent = ({ onAddressSelect }) => {
                 center={center}
                 zoom={14}
                 onClick={handleMapClick}
+                options={{
+                    zoomControl: true,
+                    streetViewControl: false,
+                    mapTypeControl: false,
+                    fullscreenControl: true,
+                }}
+                onLoad={(map) => {
+                    mapRef.current = map;
+                }}
             >
                 <Autocomplete onLoad={onLoad} onPlaceChanged={onPlaceChanged}>
                     <input
@@ -113,7 +208,66 @@ const MapComponent = ({ onAddressSelect }) => {
                     />
                 </Autocomplete>
 
-                {place && (
+                {/* Mostrar ruta si está disponible */}
+                {directionsResponse && (
+                    <DirectionsRenderer
+                        directions={directionsResponse}
+                        options={{
+                            polylineOptions: {
+                                strokeColor: '#4285F4',
+                                strokeWeight: 5,
+                                strokeOpacity: 0.8,
+                            },
+                            suppressMarkers: true, // Suprimir marcadores por defecto para usar los personalizados
+                        }}
+                        onLoad={onDirectionsRendererLoad}
+                    />
+                )}
+
+                {/* Marcador de origen (verde) */}
+                {originCoords && (
+                    <Marker
+                        position={originCoords}
+                        icon={{
+                            path: window.google.maps.SymbolPath.CIRCLE,
+                            scale: 8,
+                            fillColor: '#34A853',
+                            fillOpacity: 1,
+                            strokeColor: '#FFFFFF',
+                            strokeWeight: 2,
+                        }}
+                        label={{
+                            text: 'Origen',
+                            color: '#FFFFFF',
+                            fontSize: '12px',
+                            fontWeight: 'bold',
+                        }}
+                    />
+                )}
+
+                {/* Marcador de destino (rojo) */}
+                {destinationCoords && (
+                    <Marker
+                        position={destinationCoords}
+                        icon={{
+                            path: window.google.maps.SymbolPath.CIRCLE,
+                            scale: 8,
+                            fillColor: '#EA4335',
+                            fillOpacity: 1,
+                            strokeColor: '#FFFFFF',
+                            strokeWeight: 2,
+                        }}
+                        label={{
+                            text: 'Destino',
+                            color: '#FFFFFF',
+                            fontSize: '12px',
+                            fontWeight: 'bold',
+                        }}
+                    />
+                )}
+
+                {/* Marcador temporal cuando se está seleccionando un punto y aún no hay origen o destino */}
+                {place && (!origin || !destination) && !originCoords && !destinationCoords && (
                     <Marker
                         position={{
                             lat: place.geometry.location.lat(),
@@ -122,6 +276,22 @@ const MapComponent = ({ onAddressSelect }) => {
                     />
                 )}
             </GoogleMap>
+            {routeError && (
+                <div style={{
+                    position: 'absolute',
+                    bottom: '10px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    backgroundColor: '#ff4444',
+                    color: 'white',
+                    padding: '8px 16px',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    zIndex: 10,
+                }}>
+                    {routeError}
+                </div>
+            )}
         </MapContainer>
     );
 };
