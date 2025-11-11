@@ -377,16 +377,26 @@ function HomeDriver() {
         return;
       }
 
-      // Si no se proporciona tripId, intentar obtenerlo del índice
+      // Si no se proporciona tripId, intentar obtenerlo del índice o del array trips
       let tripToDelete = tripId;
-      if (!tripToDelete && storedUser.trips && storedUser.trips[index]) {
-        tripToDelete = storedUser.trips[index]._id;
+      if (!tripToDelete) {
+        // Intentar obtenerlo del array trips del estado
+        if (trips && trips[index] && trips[index]._id) {
+          tripToDelete = trips[index]._id;
+        }
+        // Si aún no se encuentra, intentar del localStorage
+        else if (storedUser.trips && storedUser.trips[index] && storedUser.trips[index]._id) {
+          tripToDelete = storedUser.trips[index]._id;
+        }
       }
 
       if (!tripToDelete) {
+        console.error("❌ No se pudo identificar el viaje a eliminar", { tripId, index, trips, storedTrips: storedUser.trips });
         alert("No se pudo identificar el viaje a eliminar");
         return;
       }
+
+      console.log("🗑️ Intentando eliminar viaje:", tripToDelete, "Usuario:", storedUser._id);
 
       // Eliminar el trip del backend
       const res = await fetch(`https://proyecto5-vs2l.onrender.com/api/trips/${tripToDelete}`, {
@@ -398,6 +408,8 @@ function HomeDriver() {
           userId: storedUser._id,
         }),
       });
+
+      console.log("📡 Respuesta del servidor:", res.status, res.statusText);
 
       if (res.ok) {
         // Recargar los viajes desde el backend para asegurar que estén actualizados
@@ -424,8 +436,19 @@ function HomeDriver() {
 
         alert("Viaje eliminado exitosamente ✅");
       } else {
-        const errorData = await res.json();
-        alert(errorData.message || "Error al eliminar el viaje. Por favor, intenta nuevamente.");
+        let errorMessage = "Error al eliminar el viaje. Por favor, intenta nuevamente.";
+        try {
+          const errorData = await res.json();
+          errorMessage = errorData.message || errorMessage;
+          console.error("❌ Error del servidor:", errorData);
+        } catch (jsonError) {
+          console.error("❌ Error parsing error response:", jsonError);
+          console.error("❌ Status:", res.status, "StatusText:", res.statusText);
+          if (res.status === 404) {
+            errorMessage = "La ruta de eliminación no se encontró. Por favor, verifica que el servidor esté actualizado.";
+          }
+        }
+        alert(errorMessage);
       }
     } catch (error) {
       console.error("Error deleting trip:", error);

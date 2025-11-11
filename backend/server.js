@@ -278,6 +278,88 @@ app.get("/api/trips", async (req, res) => {
   }
 });
 
+// ✅ Eliminar un trip (DEBE estar antes de GET /api/trips/:userId)
+app.delete("/api/trips/:tripId", async (req, res) => {
+  try {
+    console.log("🗑️ DELETE /api/trips/:tripId - Iniciando eliminación...");
+    const { tripId } = req.params;
+    const { userId } = req.body;
+    
+    console.log("📋 Parámetros recibidos:", { tripId, userId });
+
+    if (!tripId) {
+      console.error("❌ Falta el ID del viaje");
+      return res.status(400).json({ message: "Falta el ID del viaje" });
+    }
+
+    if (!userId) {
+      console.error("❌ Falta el ID del usuario");
+      return res.status(400).json({ message: "Falta el ID del usuario" });
+    }
+
+    // Convertir tripId a ObjectId
+    let tripObjectId;
+    if (mongoose.Types.ObjectId.isValid(tripId)) {
+      tripObjectId = new mongoose.Types.ObjectId(tripId);
+    } else {
+      return res.status(400).json({ message: "ID de viaje inválido" });
+    }
+
+    // Buscar el usuario conductor que tiene el trip
+    const driver = await User.findOne({ "trips._id": tripObjectId });
+    if (!driver) {
+      return res.status(404).json({ message: "Viaje no encontrado" });
+    }
+
+    // Verificar que el usuario sea el dueño del viaje
+    if (driver._id.toString() !== userId) {
+      return res.status(403).json({ message: "No tienes permiso para eliminar este viaje" });
+    }
+
+    // Encontrar el trip específico
+    const trip = driver.trips.id(tripObjectId);
+    if (!trip) {
+      return res.status(404).json({ message: "Viaje no encontrado en el conductor" });
+    }
+
+    // Eliminar todas las reservas relacionadas con este trip de todos los usuarios
+    const allUsers = await User.find({});
+    let deletedReservationsCount = 0;
+
+    for (const user of allUsers) {
+      if (user.reservations && Array.isArray(user.reservations)) {
+        const reservationsToDelete = user.reservations.filter(
+          (reservation) => reservation.tripId && reservation.tripId.toString() === tripObjectId.toString()
+        );
+        
+        if (reservationsToDelete.length > 0) {
+          reservationsToDelete.forEach((reservation) => {
+            user.reservations.pull(reservation._id);
+            deletedReservationsCount++;
+          });
+          await user.save();
+        }
+      }
+    }
+
+    // Eliminar el trip del conductor
+    driver.trips.pull(tripObjectId);
+    await driver.save();
+
+    res.status(200).json({
+      message: "Viaje eliminado exitosamente",
+      tripId: tripId,
+      deletedReservationsCount: deletedReservationsCount,
+    });
+  } catch (err) {
+    console.error("❌ Error en DELETE /api/trips/:tripId:", err);
+    res.status(500).json({
+      message: "Error en servidor",
+      error: err.message,
+    });
+  }
+});
+
 // ✅ Obtener todos los trips de un usuario específico
 app.get("/api/trips/:userId", async (req, res) => {
   try {
