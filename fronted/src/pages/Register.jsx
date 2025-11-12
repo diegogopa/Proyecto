@@ -134,6 +134,11 @@ const Register = () => {
         }
       );
 
+      // ✅ IMPORTANTE: Limpiar cualquier sesión previa antes de guardar el nuevo usuario
+      // Esto evita que se comparta la sesión entre pestañas
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      
       setModalMessage('Registro exitoso');
       setModalDetails(response.data.message || 'Tu cuenta fue creada correctamente.');
       setModalType('yes');

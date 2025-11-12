@@ -81,7 +81,8 @@ const SoatPhoto = () => {
     try {
       setIsLoading(true);
       
-      // Obtener el email del localStorage
+      // ✅ IMPORTANTE: Obtener el email del localStorage y verificar que sea del usuario actual
+      // No usar la sesión de otra pestaña
       const userEmail = localStorage.getItem("userEmail");
       if (!userEmail) {
         alert("No se encontró la información del usuario. Por favor, inicia sesión.");
@@ -89,9 +90,23 @@ const SoatPhoto = () => {
         return;
       }
 
-      // Obtener los datos del usuario desde el backend
+      // ✅ IMPORTANTE: Limpiar cualquier sesión previa antes de obtener los datos del usuario
+      // Esto evita que se use la sesión de otra pestaña
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+
+      // Obtener los datos del usuario desde el backend usando el email del registro
       const response = await axios.get(`${API_BASE_URL}/users/${userEmail}`);
       const user = response.data;
+
+      // ✅ Verificar que el email del usuario obtenido coincida con el email del registro
+      if (user.email !== userEmail) {
+        console.error("❌ El email del usuario no coincide con el email del registro");
+        alert("Error: La sesión no coincide. Por favor, inicia sesión nuevamente.");
+        localStorage.removeItem("userEmail");
+        navigate("/login");
+        return;
+      }
 
       // Guardar los datos del usuario en localStorage como se hace en el login
       localStorage.setItem("user", JSON.stringify(user));
@@ -100,6 +115,10 @@ const SoatPhoto = () => {
       navigate("/home");
     } catch (error) {
       console.error("Error al obtener datos del usuario:", error);
+      // Limpiar localStorage en caso de error
+      localStorage.removeItem("user");
+      localStorage.removeItem("userEmail");
+      localStorage.removeItem("token");
       alert("Error al cargar la información del usuario. Por favor, inicia sesión.");
       navigate("/login");
     } finally {

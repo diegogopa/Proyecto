@@ -57,31 +57,53 @@ const CarQuestion = () => {
     // Verificar si el usuario ya tiene carro registrado al cargar el componente
     const checkUserCar = async () => {
       try {
-        const storedUser = JSON.parse(localStorage.getItem("user"));
-        
-        // Primero verificar en localStorage
-        if (storedUser && storedUser.placa && storedUser.placa.trim() !== "") {
-          const hasCarComplete = storedUser.placa?.trim() &&
-                                 storedUser.marca?.trim() &&
-                                 storedUser.modelo?.trim() &&
-                                 storedUser.cupos > 0;
-          
-          if (hasCarComplete) {
-            console.log("Usuario ya tiene carro en localStorage, redirigiendo a home-driver");
-            navigate("/home-driver");
-            return;
-          }
-        }
-
-        // Si no está en localStorage, verificar en el backend
-        const userEmail = storedUser?.email || localStorage.getItem("userEmail");
+        // ✅ IMPORTANTE: Obtener primero el email del registro para verificar que coincida
+        const userEmail = localStorage.getItem("userEmail");
         if (!userEmail) {
+          // Si no hay email del registro, limpiar localStorage y redirigir a login
+          localStorage.removeItem("user");
+          localStorage.removeItem("token");
           navigate("/login");
           return;
         }
 
+        const storedUser = JSON.parse(localStorage.getItem("user") || "null");
+        
+        // ✅ IMPORTANTE: Verificar que el usuario en localStorage coincida con el email del registro
+        // Esto evita usar la sesión de otra pestaña
+        if (storedUser && storedUser.email && storedUser.email === userEmail) {
+          // Primero verificar en localStorage solo si el email coincide
+          if (storedUser.placa && storedUser.placa.trim() !== "") {
+            const hasCarComplete = storedUser.placa?.trim() &&
+                                   storedUser.marca?.trim() &&
+                                   storedUser.modelo?.trim() &&
+                                   storedUser.cupos > 0;
+            
+            if (hasCarComplete) {
+              console.log("Usuario ya tiene carro en localStorage, redirigiendo a home-driver");
+              navigate("/home-driver");
+              return;
+            }
+          }
+        } else {
+          // Si el usuario en localStorage no coincide con el email del registro, limpiarlo
+          localStorage.removeItem("user");
+          localStorage.removeItem("token");
+        }
+
+        // Si no está en localStorage o no coincide, verificar en el backend
         const res = await axios.get(`${API_BASE_URL}/users/${userEmail}`);
         const user = res.data;
+
+        // ✅ IMPORTANTE: Verificar que el email del usuario obtenido coincida con el email del registro
+        if (user.email !== userEmail) {
+          console.error("❌ El email del usuario no coincide con el email del registro");
+          localStorage.removeItem("user");
+          localStorage.removeItem("userEmail");
+          localStorage.removeItem("token");
+          navigate("/login");
+          return;
+        }
 
         // ✅ Validar que todos los campos del carro estén completos
         const hasCarComplete = user.placa?.trim() &&
@@ -91,13 +113,15 @@ const CarQuestion = () => {
 
         if (hasCarComplete) {
           console.log("Usuario ya tiene carro en backend, redirigiendo a home-driver");
-          // Actualizar localStorage
+          // Actualizar localStorage solo si el email coincide
           localStorage.setItem("user", JSON.stringify(user));
           navigate("/home-driver");
         }
       } catch (error) {
         console.error("Error al verificar carro del usuario:", error);
-        // Si hay error, dejar que el usuario continúe con el flujo normal
+        // Si hay error, limpiar localStorage y dejar que el usuario continúe con el flujo normal
+        localStorage.removeItem("user");
+        localStorage.removeItem("token");
       }
     };
 
