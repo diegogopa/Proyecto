@@ -134,16 +134,42 @@ const CarQuestion = () => {
       return;
     }
 
-    if (answer === "no") {
-      navigate("/home");
-      return;
-    }
-
     try {
       const userEmail = localStorage.getItem("userEmail");
+      if (!userEmail) {
+        alert("No se encontró la información del usuario. Por favor, inicia sesión.");
+        navigate("/login");
+        return;
+      }
+
+      // ✅ IMPORTANTE: Limpiar cualquier sesión previa antes de obtener los datos del usuario
+      // Esto evita que se use la sesión de otra pestaña
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+
+      // Obtener los datos del usuario desde el backend
       const res = await axios.get(`${API_BASE_URL}/users/${userEmail}`);
       const user = res.data;
 
+      // ✅ IMPORTANTE: Verificar que el email del usuario obtenido coincida con el email del registro
+      if (user.email !== userEmail) {
+        console.error("❌ El email del usuario no coincide con el email del registro");
+        alert("Error: La sesión no coincide. Por favor, inicia sesión nuevamente.");
+        localStorage.removeItem("userEmail");
+        navigate("/login");
+        return;
+      }
+
+      // Guardar los datos del usuario en localStorage
+      localStorage.setItem("user", JSON.stringify(user));
+
+      if (answer === "no") {
+        // Si el usuario no quiere registrar un carro, ir directamente al home
+        navigate("/home");
+        return;
+      }
+
+      // Si el usuario quiere registrar un carro, verificar si ya tiene uno completo
       // ✅ Validamos que todos los campos del carro estén completos
       const hasCarComplete =
         user.placa?.trim() &&
@@ -159,7 +185,12 @@ const CarQuestion = () => {
 
     } catch (error) {
       console.error("❌ Error al revisar datos del carro:", error);
-      alert("No se pudo verificar la información del usuario");
+      // Limpiar localStorage en caso de error
+      localStorage.removeItem("user");
+      localStorage.removeItem("userEmail");
+      localStorage.removeItem("token");
+      alert("No se pudo verificar la información del usuario. Por favor, inicia sesión.");
+      navigate("/login");
     }
   };
 
