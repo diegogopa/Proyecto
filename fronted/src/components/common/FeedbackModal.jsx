@@ -1,34 +1,39 @@
-//Sirve para mostrar modales de retroalimentación al usuario con diferentes tipos de mensajes e íconos.
+// src/components/common/FeedbackModal.jsx
+//Componente para mostrar mensajes de retroalimentación al usuario
+
 import React from 'react';
 import PropTypes from 'prop-types';
 import yesIcon from '../../assets/Yes.webp';
 import noIcon from '../../assets/No.png';
-import questionIcon from '../../assets/Question.png'; 
+import questionIcon from '../../assets/Question.png';
 import colors from '../../assets/Colors';
 import { Text, Title } from './CommonStyles';
 import Button from './Button'; 
 
-const FeedbackModal = ({ type, message, details, onClose, onConfirm }) => {
+const FeedbackModal = ({ type, message, details, onClose, onConfirm }) => { //Componente funcional que muestra un modal de retroalimentación
   let icon;
   let confirmLabel = 'Aceptar';
   let cancelLabel = 'Cancelar';
 
-  switch (type) {
+  switch (type) { //Determina el ícono y las etiquetas según el tipo de modal
     case 'yes':
       icon = yesIcon;
       confirmLabel = '¡Listo!';
       cancelLabel = null;
       break;
+
     case 'no':
-    case 'error': // 🛑 NUEVO: Usaremos 'error' para el mensaje de carro
+    case 'error': 
       icon = noIcon;
-      confirmLabel = 'Aceptar'; // Cambiamos a 'Aceptar' para el error de carro
-      cancelLabel = 'Cancelar'; // Mantenemos 'Cancelar'
+      confirmLabel = 'Aceptar'; 
+      cancelLabel = 'Cancelar'; 
       break;
+
     case 'question':
       icon = questionIcon;
-      confirmLabel = 'Aceptar'; // Usamos 'Aceptar' para la confirmación de rol
+      confirmLabel = 'Aceptar'; 
       break;
+
     default:
       icon = yesIcon;
   }
@@ -39,36 +44,32 @@ const FeedbackModal = ({ type, message, details, onClose, onConfirm }) => {
 
   return (
     <div style={styles.modalOverlay}>
-      {/* ... (Tu modalContainer y el icono siguen iguales) */}
       <div style={{ ...styles.modalContainer, ...styles[type] }}>
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
           <img src={icon} alt={`${type} icon`} style={styles.modalIcon} />
         </div>
         <Title>{message}</Title>
         <Text>{details}</Text>
-        <div style={styles.buttonContainer}>
-          
+        <div style={styles.buttonContainer}> 
           {/* Lógica de botones para 'question' (Aceptar y Cancelar) */}
           {type === 'question' && (
             <>
-              <Button text={cancelLabel} onClick={onClose} primary={false} />
-              <Button text={confirmLabel} onClick={onConfirm} primary={true} />
+              <Button text={cancelLabel} onClick={onClose} $primary={false} />
+              <Button text={confirmLabel} onClick={onConfirm} $primary={true} />
             </>
           )}
 
           {/* Lógica de botones para 'no'/'error' (Cancelar y Aceptar) */}
           {(type === 'no' || type === 'error') && (
             <>
-              <Button text="Cancelar" onClick={onClose} primary={false} /> {/* El botón secundario es Cancelar */}
-              <Button text="Aceptar" onClick={onClose} primary={true} />  {/* El botón principal es Aceptar, pero ambos cierran en este caso */}
+              <Button text="Cancelar" onClick={onClose} $primary={false} />
+              <Button text="Aceptar" onClick={onClose} $primary={true} />
             </>
           )}
 
-          {/* Lógica para 'yes' (solo el botón principal) */}
           {type === 'yes' && (
-            <Button text={confirmLabel} onClick={onClose} primary={true} />
+            <Button text={confirmLabel} onClick={onClose} $primary={true} />
           )}
-
         </div>
       </div>
     </div>
@@ -88,7 +89,7 @@ const styles = {
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
-  }, // Asegura que el modal esté por encima de otros elementos
+  },  // Aseguramos que el modal esté por encima de otros elementos
   modalContainer: {
     backgroundColor: colors.background,
     padding: '40px',
@@ -107,9 +108,9 @@ const styles = {
   },
   question: {
     border: `3px solid ${colors.detail}`,
-  }, 
+  },
   error: {
-    border: `3px solid ${colors.third}`, 
+    border: `3px solid ${colors.third}`,
   }, // Estilos específicos por tipo
   modalIcon: {
     width: '60px',
@@ -131,7 +132,7 @@ FeedbackModal.propTypes = {
   message: PropTypes.string.isRequired,
   details: PropTypes.string.isRequired,
   onClose: PropTypes.func.isRequired,
-  onConfirm: PropTypes.func, // onConfirm es opcional para el tipo yes
+  onConfirm: PropTypes.func,
 };
 
 export default FeedbackModal;

@@ -1,5 +1,8 @@
+//Direccion
+//Componente de carga con animación
+
 import React from "react";
-import styled, { keyframes } from "styled-components"; // Necesitas importar keyframes
+import styled, { keyframes } from "styled-components"; 
 import colors from '../../assets/Colors';
 
 // Define el keyframes para el loader
@@ -18,7 +21,7 @@ const StyledWrapper = styled.div`
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 1000;
+  z-index: 1000; 
 
   .spinner {
     font-size: 28px;
@@ -41,7 +44,7 @@ const StyledWrapper = styled.div`
     border-radius: 0.0555em;
     background-color: transparent;
     transform-origin: center -0.2222em;
-    animation: ${loaderFade} 1s infinite linear; /* Usamos el keyframes definido */
+    animation: ${loaderFade} 1s infinite linear; 
   }
 
   .spinner .spinner-blade:nth-child(1) { animation-delay: 0s; transform: rotate(0deg); }
@@ -62,7 +65,7 @@ const Loader = () => {
   return (
     <StyledWrapper>
       <div className="spinner center">
-        {/* Generamos las 12 imagenes del loader que yo me inventé */}
+        {/* Generamos las 12 imagenes del loader que nos inventamos*/}
         {Array.from({ length: 12 }).map((_, index) => (
           <div key={index} className="spinner-blade" />
         ))}

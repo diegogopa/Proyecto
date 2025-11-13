@@ -1,4 +1,5 @@
-//Guarda los estilos comunes utilizados en la aplicación
+// src/components/common/CommonStyles.jsx
+//Estilos comunes exportados
 
 import styled from 'styled-components';
 import Colors from '../../assets/Colors';

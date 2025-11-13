@@ -1,10 +1,15 @@
+// src/components/common/Button.jsx, diego siempre que haya un return, significa que se renderiza el componente
+//Componente de botón reutilizable
+
 import React from 'react';
 import styled from 'styled-components';
 import Colors from '../../assets/Colors';
 
-const StyledButton = styled.button`
+//Componente de botón estilizado usando styled-components
+//Si $primary es true, usa el color primario, si es false, usa transparente
+const StyledButton = styled.button` 
   background-color: ${({ $primary }) =>
-    $primary ? Colors.primary : 'transparent'};
+    $primary ? Colors.primary : 'transparent'}; 
   color: ${({ $primary }) =>
     $primary ? Colors.white : Colors.primary};
   border: 2px solid ${Colors.primary};
@@ -16,6 +21,7 @@ const StyledButton = styled.button`
   transition: all 0.2s ease;
 `;
 
+//Componente funcional de botón reutilizable
 const Button = ({ text, $primary, onClick, type }) => {
   return (
     <StyledButton $primary={$primary} onClick={onClick} type={type}>

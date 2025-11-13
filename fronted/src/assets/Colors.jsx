@@ -1,3 +1,5 @@
+// src/assets/Colors.jsx
+//Contiene los colores utilizados en la aplicación
 const Colors = {
   primary: '#334259',        // Azul oscuro principal
   background: '#F6F5F5',     // Fondo general
