@@ -256,6 +256,25 @@ const GreetingLeft = styled.h2`
   }
 `;
 
+// Función para convertir hora en formato "HH:MM AM/PM" a minutos del día para comparación
+const timeToMinutes = (timeString) => {
+    if (!timeString) return 0;
+    const timeRegex = /(\d{1,2}):(\d{2})\s*(AM|PM)/i;
+    const match = timeString.match(timeRegex);
+    if (!match) return 0;
+    
+    let hours = parseInt(match[1]);
+    const minutes = parseInt(match[2]);
+    const period = match[3].toUpperCase();
+    
+    if (period === "PM" && hours !== 12) {
+        hours += 12;
+    } else if (period === "AM" && hours === 12) {
+        hours = 0;
+    }
+    
+    return hours * 60 + minutes;
+};
 
 function Home() {
     const { isDriver } = useDriver();
@@ -272,6 +291,8 @@ function Home() {
     const [selectedTrip, setSelectedTrip] = useState(null);
     const [reservations, setReservations] = useState([]);
     const [isLoadingReservations, setIsLoadingReservations] = useState(false);
+    const [upcomingTrip, setUpcomingTrip] = useState(null);
+    const [isLoadingUpcoming, setIsLoadingUpcoming] = useState(false);
 
     const handleReserveStart = (trip) => {
         // Convertir cupos a número si es necesario
@@ -391,6 +412,68 @@ function Home() {
 
         if (activeTab === "reserved") {
             fetchReservations();
+        }
+    }, [activeTab]);
+
+    // Obtener el viaje más próximo (reservas aceptadas)
+    useEffect(() => {
+        const fetchUpcomingTrip = async () => {
+            try {
+                setIsLoadingUpcoming(true);
+                const storedUser = JSON.parse(localStorage.getItem("user"));
+                if (!storedUser?._id) {
+                    setUpcomingTrip(null);
+                    setIsLoadingUpcoming(false);
+                    return;
+                }
+
+                const res = await fetch(`https://proyecto5-vs2l.onrender.com/api/users/${storedUser._id}/reservations`, {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    const reservations = data.reservations || [];
+                    
+                    // Filtrar solo reservas aceptadas que tengan detalles del viaje
+                    const acceptedReservations = reservations.filter(
+                        (reservation) => 
+                            reservation.status === "Aceptada" && 
+                            reservation.tripDetails
+                    );
+
+                    if (acceptedReservations.length === 0) {
+                        setUpcomingTrip(null);
+                        setIsLoadingUpcoming(false);
+                        return;
+                    }
+
+                    // Ordenar por hora de salida (más próximo primero)
+                    acceptedReservations.sort((a, b) => {
+                        const timeA = timeToMinutes(a.tripDetails.horaSalida);
+                        const timeB = timeToMinutes(b.tripDetails.horaSalida);
+                        return timeA - timeB;
+                    });
+
+                    // Tomar el viaje más próximo
+                    setUpcomingTrip(acceptedReservations[0]);
+                } else {
+                    console.error("Error fetching reservations:", res.status);
+                    setUpcomingTrip(null);
+                }
+            } catch (error) {
+                console.error("Error fetching upcoming trip:", error);
+                setUpcomingTrip(null);
+            } finally {
+                setIsLoadingUpcoming(false);
+            }
+        };
+
+        if (activeTab === "current") {
+            fetchUpcomingTrip();
         }
     }, [activeTab]);
 
@@ -663,9 +746,59 @@ return (
             )}
 
             {activeTab === "current" && (
-                <h3 style={{ textAlign: "center", color: colors.text }}>
-                    🛣️ Aquí verás tus viajes en curso.
-                </h3>
+                <>
+                    {isLoadingUpcoming ? (
+                        <p style={{ textAlign: "center", color: colors.text }}>Cargando viaje...</p>
+                    ) : upcomingTrip ? (
+                        <div
+                            style={{
+                                background: "white",
+                                padding: "20px",
+                                borderRadius: "10px",
+                                boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+                                maxWidth: "600px",
+                                margin: "0 auto",
+                            }}
+                        >
+                            <div style={{ marginBottom: "15px" }}>
+                                <strong style={{ fontSize: "1.2rem", color: colors.text }}>
+                                    {upcomingTrip.tripDetails.desde} → {upcomingTrip.tripDetails.para}
+                                </strong>
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                                <p style={{ margin: "5px 0", color: colors.text }}>
+                                    <strong>Hora de salida:</strong> {upcomingTrip.tripDetails.horaSalida}
+                                </p>
+                                <p style={{ margin: "5px 0", color: colors.text }}>
+                                    <strong>Conductor:</strong> {upcomingTrip.driverName}
+                                </p>
+                                <p style={{ margin: "5px 0", color: colors.text }}>
+                                    <strong>Sector:</strong> {upcomingTrip.tripDetails.sector}
+                                </p>
+                                <p style={{ margin: "5px 0", color: colors.text }}>
+                                    <strong>Valor:</strong> ${typeof upcomingTrip.tripDetails.valor === 'number' 
+                                        ? upcomingTrip.tripDetails.valor.toLocaleString() 
+                                        : upcomingTrip.tripDetails.valor || "0"}
+                                </p>
+                                {upcomingTrip.pickupAddress && (
+                                    <p style={{ margin: "5px 0", color: colors.text }}>
+                                        <strong>Dirección de recogida:</strong> {upcomingTrip.pickupAddress}
+                                    </p>
+                                )}
+                                <p style={{ margin: "5px 0", color: colors.text }}>
+                                    <strong>Estado:</strong> <span style={{ color: "#2ecc71", fontWeight: "600" }}>{upcomingTrip.status}</span>
+                                </p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div style={{ textAlign: "center", padding: "40px", color: colors.text }}>
+                            <p style={{ fontSize: "1.1rem" }}>🛣️ No tienes viajes reservados próximos.</p>
+                            <p style={{ marginTop: "10px", fontSize: "0.9rem", color: "#666" }}>
+                                Reserva un viaje para verlo aquí.
+                            </p>
+                        </div>
+                    )}
+                </>
             )}
         </ContentWrapper>
     </HomeContainer>
