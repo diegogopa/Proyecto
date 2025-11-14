@@ -1,8 +1,12 @@
+//src/components/home/Home.jsx
+//Componente principal de la vista Home para usuarios Pasajeros
+//Incluye: búsqueda de viajes, reservas, viajes en curso y gestión de reservas
+
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import colors from '../../assets/Colors.jsx';
-import TripCard from "../trips/TripCard.jsx";
-import { useDriver } from "../../contexts/DriverContext.jsx";
+import TripCard from "../trips/TripCard.jsx"; //Componente de tarjeta de viaje
+import { useDriver } from "../../contexts/DriverContext.jsx"; //Context para verificar si es conductor
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'; 
 import { faCar } from "@fortawesome/free-solid-svg-icons";
 import logo from '../../assets/Logo.png';
@@ -11,7 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import iconHome from "../../assets/Home.png";
 import iconReservedTravel from "../../assets/ReservedTravel.png";
 import iconCurrentTravel from "../../assets/CurrentTravel.png";
-import ReservedTravel from '../trips/ApiReserveTravel.jsx';
+import ReservedTravel from '../trips/ApiReserveTravel.jsx'; //Componente para reservar un viaje
 
 // --- Estilos de la Página ---
 const HomeContainer = styled.div`
@@ -256,7 +260,7 @@ const GreetingLeft = styled.h2`
   }
 `;
 
-// Función para convertir hora en formato "HH:MM AM/PM" a minutos del día para comparación
+//Convierte hora en formato "HH:MM AM/PM" 
 const timeToMinutes = (timeString) => {
     if (!timeString) return 0;
     const timeRegex = /(\d{1,2}):(\d{2})\s*(AM|PM)/i;
@@ -267,54 +271,59 @@ const timeToMinutes = (timeString) => {
     const minutes = parseInt(match[2]);
     const period = match[3].toUpperCase();
     
+    //Convierte a formato 24 horas
     if (period === "PM" && hours !== 12) {
         hours += 12;
     } else if (period === "AM" && hours === 12) {
         hours = 0;
     }
     
+    //Retorna el total de minutos desde medianoche
     return hours * 60 + minutes;
 };
 
+//Componente principal Home para usuarios Pasajeros
 function Home() {
-    const { isDriver } = useDriver();
-    const [userName, setUserName] = useState("Susana");
-    const [menuOpen, setMenuOpen] = useState(false);
-    const [sector, setSector] = useState("");
-    const [puestos, setPuestos] = useState("");
-    const [allTrips, setAllTrips] = useState([]);
-    const [filteredTrips, setFilteredTrips] = useState([]);
-    const [activeTab, setActiveTab] = useState("home");
-    const [isLoading, setIsLoading] = useState(true);
+    const { isDriver } = useDriver(); //Context para verificar si es conductor
+    const [userName, setUserName] = useState("Susana"); //Nombre del usuario
+    const [menuOpen, setMenuOpen] = useState(false); //Estado del menú desplegable
+    const [sector, setSector] = useState(""); //Sector seleccionado para filtrar
+    const [puestos, setPuestos] = useState(""); //Cantidad de puestos para filtrar
+    const [allTrips, setAllTrips] = useState([]); 
+    const [filteredTrips, setFilteredTrips] = useState([]); //Viajes filtrados según búsqueda
+    const [activeTab, setActiveTab] = useState("home"); //Pestaña activa (home, reserved, current)
+    const [isLoading, setIsLoading] = useState(true); //Estado de carga de viajes
     const navigate = useNavigate();
-    const [isReserving, setIsReserving] = useState(false);
-    const [selectedTrip, setSelectedTrip] = useState(null);
-    const [reservations, setReservations] = useState([]);
-    const [isLoadingReservations, setIsLoadingReservations] = useState(false);
-    const [upcomingTrip, setUpcomingTrip] = useState(null);
-    const [isLoadingUpcoming, setIsLoadingUpcoming] = useState(false);
+    const [isReserving, setIsReserving] = useState(false); //Si está en proceso de reserva
+    const [selectedTrip, setSelectedTrip] = useState(null); //Viaje seleccionado para reservar
+    const [reservations, setReservations] = useState([]); //Lista de reservas del usuario
+    const [isLoadingReservations, setIsLoadingReservations] = useState(false); //Estado de carga de reservas
+    const [upcomingTrip, setUpcomingTrip] = useState(null); //Viaje más próximo
+    const [isLoadingUpcoming, setIsLoadingUpcoming] = useState(false); //Estado de carga del viaje próximo
 
+    //Inicia el proceso de reserva de un viaje
     const handleReserveStart = (trip) => {
-        // Convertir cupos a número si es necesario
+        //Convierte cupos a número si es necesario
         const cuposNum = typeof trip.cupos === 'string' ? parseInt(trip.cupos) : trip.cupos;
         
-        // Verificar si hay cupos disponibles
+        //Verifica si hay cupos disponibles antes de permitir la reserva
         if (cuposNum === 0) {
             alert("⚠️ Este tramo está lleno. No hay cupos disponibles.");
             return;
         }
 
+        //Guarda el viaje seleccionado y activa el componente de reserva
         setSelectedTrip(trip);
         setIsReserving(true);
     };
 
+    //Finaliza el proceso de reserva y refresca los datos
     const handleReservationFinish = () => {
         setIsReserving(false);
         setSelectedTrip(null);
-        setActiveTab("home");
-        // Refrescar los trips para mostrar los cupos actualizados
-        // Esto se hace automáticamente cuando activeTab cambia a "home" en el useEffect
-        // También refrescar las reservas si el usuario vuelve a la pestaña de reservas
+        setActiveTab("home"); //Vuelve a la pestaña de inicio
+        
+        //Refresca las reservas para mostrar las actualizadas
         const refreshReservations = async () => {
             try {
                 const storedUser = JSON.parse(localStorage.getItem("user"));
@@ -336,13 +345,12 @@ function Home() {
         refreshReservations();
     };
 
-    // Obtener todos los viajes del backend
+    //Obtiene todos los viajes disponibles del backend cuando está en la pestaña "home"
     useEffect(() => {
         const fetchTrips = async () => {
             try {
                 setIsLoading(true);
                 const url = "https://proyecto5-vs2l.onrender.com/api/trips";
-                console.log("Fetching trips from:", url);
                 
                 const res = await fetch(url, {
                     method: "GET",
@@ -351,16 +359,13 @@ function Home() {
                     },
                 });
                 
-                console.log("Response status:", res.status);
-                
                 if (!res.ok) {
                     const errorText = await res.text();
-                    console.error("Error response:", errorText);
                     throw new Error(`Error al obtener viajes: ${res.status} ${errorText}`);
                 }
                 
                 const data = await res.json();
-                console.log("Trips data received:", data);
+                //Guarda todos los viajes y los viajes filtrados
                 setAllTrips(data.trips || []);
                 setFilteredTrips(data.trips || []);
             } catch (error) {
@@ -372,12 +377,13 @@ function Home() {
             }
         };
 
+        //Solo obtiene los viajes cuando está en la pestaña "home"
         if (activeTab === "home") {
             fetchTrips();
         }
     }, [activeTab]);
 
-    // Obtener reservas del usuario
+    //Obtiene las reservas del usuario cuando está en la pestaña "reserved"
     useEffect(() => {
         const fetchReservations = async () => {
             try {
@@ -410,12 +416,13 @@ function Home() {
             }
         };
 
+        //Solo obtiene las reservas cuando está en la pestaña "reserved"
         if (activeTab === "reserved") {
             fetchReservations();
         }
     }, [activeTab]);
 
-    // Obtener el viaje más próximo (reservas aceptadas)
+    //Obtiene el viaje más próximo (reservas aceptadas) cuando está en la pestaña "current"
     useEffect(() => {
         const fetchUpcomingTrip = async () => {
             try {
@@ -438,7 +445,7 @@ function Home() {
                     const data = await res.json();
                     const reservations = data.reservations || [];
                     
-                    // Filtrar solo reservas aceptadas que tengan detalles del viaje
+                    //Filtra solo reservas aceptadas que tengan detalles del viaje
                     const acceptedReservations = reservations.filter(
                         (reservation) => 
                             reservation.status === "Aceptada" && 
@@ -451,14 +458,14 @@ function Home() {
                         return;
                     }
 
-                    // Ordenar por hora de salida (más próximo primero)
+                    //Ordena por hora de salida (más próximo primero) usando timeToMinutes
                     acceptedReservations.sort((a, b) => {
                         const timeA = timeToMinutes(a.tripDetails.horaSalida);
                         const timeB = timeToMinutes(b.tripDetails.horaSalida);
                         return timeA - timeB;
                     });
 
-                    // Tomar el viaje más próximo
+                    //Toma el viaje más próximo (el primero después de ordenar)
                     setUpcomingTrip(acceptedReservations[0]);
                 } else {
                     console.error("Error fetching reservations:", res.status);
@@ -472,20 +479,22 @@ function Home() {
             }
         };
 
+        //Solo obtiene el viaje próximo cuando está en la pestaña "current"
         if (activeTab === "current") {
             fetchUpcomingTrip();
         }
     }, [activeTab]);
 
-    // Función para cancelar/borrar una reserva
+    //Cancela o borra una reserva según su estado
     const handleCancelReservation = async (reservationId) => {
-        // Buscar la reserva para determinar el mensaje
+        //Busca la reserva para determinar el mensaje de confirmación
         const reservation = reservations.find(r => r._id === reservationId);
         const isRejected = reservation?.status === "Rechazada";
         const confirmMessage = isRejected 
             ? "¿Estás seguro de que quieres borrar esta reserva rechazada? Los cupos se devolverán al viaje."
             : "¿Estás seguro de que quieres cancelar esta reserva?";
         
+        //Pide confirmación antes de proceder
         if (!window.confirm(confirmMessage)) {
             return;
         }
@@ -534,15 +543,17 @@ function Home() {
         }
     };
 
+    //Filtra los viajes según el sector y cantidad de puestos seleccionados
     const handleSearch = () => {
         const filtered = allTrips.filter(
         (trip) =>
-            (sector === "" || trip.sector === sector) &&
-            (puestos === "" || trip.cupos >= parseInt(puestos))
+            (sector === "" || trip.sector === sector) && //Filtra por sector si está seleccionado
+            (puestos === "" || trip.cupos >= parseInt(puestos)) //Filtra por cupos disponibles
         );
         setFilteredTrips(filtered);
     };
 
+    //Obtiene el nombre del usuario del localStorage al montar el componente
     useEffect(() => {
       const storedUser = JSON.parse(localStorage.getItem("user"));
       if (storedUser && storedUser.nombre) {
@@ -550,6 +561,7 @@ function Home() {
       }
     }, []);
 
+    //Si está en proceso de reserva, muestra el componente de reserva
     if (isReserving && selectedTrip) {
         return (
             <HomeContainer>
@@ -601,11 +613,13 @@ return (
             </NavMenu>
 
         <ContentWrapper>
+            {/*Pestaña Home: Búsqueda y listado de viajes disponibles*/}
             {activeTab === "home" && (
                 <>
                 <SearchBarContainer>
                     <GreetingLeft>¡Buen viaje {userName || "Pasajero"}!</GreetingLeft>
 
+                    {/*Selector de sector - extrae sectores únicos de todos los viajes*/}
                     <Selector value={sector} onChange={(e) => setSector(e.target.value)}>
                         <option value="">Sectores</option>
                         {Array.from(new Set(allTrips.map(trip => trip.sector))).map((s) => (
@@ -613,6 +627,7 @@ return (
                         ))}
                     </Selector>
 
+                    {/*Input para cantidad de puestos requeridos*/}
                     <SearchInput
                         type="number"
                         placeholder="Cantidad de puestos disponibles"
@@ -621,17 +636,20 @@ return (
                         onChange={(e) => setPuestos(e.target.value)}
                     />
 
+                    {/*Botón para ejecutar la búsqueda*/}
                     <ActionButton onClick={handleSearch}>
                         <FontAwesomeIcon icon={faCar} /> Buscar
                     </ActionButton>
                 </SearchBarContainer>
 
+                {/*Muestra estado de carga, mensaje vacío o grid de viajes según corresponda*/}
                 {isLoading ? (
                     <p style={{ textAlign: "center", color: colors.text }}>Cargando viajes...</p>
                 ) : filteredTrips.length === 0 ? (
                     <p style={{ textAlign: "center", color: colors.text }}>No hay viajes disponibles 😢</p>
                 ) : (
                     <TripCardGrid>
+                        {/*Mapea cada viaje filtrado y muestra una tarjeta*/}
                         {filteredTrips.map((trip) => (
                         <TripCard
                             key={trip.id || trip.tripId}
@@ -650,6 +668,7 @@ return (
                 </>
             )}
 
+            {/*Pestaña Reserved: Lista de reservas del usuario*/}
             {activeTab === "reserved" && (
                 <>
                     {isLoadingReservations ? (
@@ -658,6 +677,7 @@ return (
                         <p style={{ textAlign: "center", color: colors.text }}>Aún no has reservado ningún viaje 😢</p>
                     ) : (
                         <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+                            {/*Mapea cada reserva y muestra una tarjeta con sus detalles*/}
                             {reservations.map((reservation) => (
                                 reservation.tripDetails ? (
                                     <div
@@ -687,19 +707,21 @@ return (
                                                     ? reservation.tripDetails.valor.toLocaleString() 
                                                     : reservation.tripDetails.valor || "0"}
                                             </p>
+                                            {/*Muestra el estado con color según su valor*/}
                                             <p style={{ 
                                                 margin: "8px 0", 
                                                 fontSize: "0.9rem",
                                                 fontWeight: "600",
                                                 color: reservation.status === "Aceptada" 
-                                                    ? "#2ecc71" // Verde
+                                                    ? "#2ecc71" //Verde
                                                     : reservation.status === "Rechazada" 
-                                                    ? "#e74c3c" // Rojo
-                                                    : "#f39c12" // Amarillo para Pendiente
+                                                    ? "#e74c3c" //Rojo
+                                                    : "#f39c12" //Amarillo para Pendiente
                                             }}>
                                                 Estado: {reservation.status}
                                             </p>
                                         </div>
+                                        {/*Botón diferente según el estado: Borrar para rechazadas, Cancelar para otras*/}
                                         {reservation.status === "Rechazada" ? (
                                             <button
                                                 style={{
@@ -745,11 +767,13 @@ return (
                 </>
             )}
 
+            {/*Pestaña Current: Muestra el viaje más próximo (reserva aceptada más cercana)*/}
             {activeTab === "current" && (
                 <>
                     {isLoadingUpcoming ? (
                         <p style={{ textAlign: "center", color: colors.text }}>Cargando viaje...</p>
                     ) : upcomingTrip ? (
+                        /*Muestra los detalles del viaje más próximo*/
                         <div
                             style={{
                                 background: "white",
@@ -780,6 +804,7 @@ return (
                                         ? upcomingTrip.tripDetails.valor.toLocaleString() 
                                         : upcomingTrip.tripDetails.valor || "0"}
                                 </p>
+                                {/*Muestra dirección de recogida si existe*/}
                                 {upcomingTrip.pickupAddress && (
                                     <p style={{ margin: "5px 0", color: colors.text }}>
                                         <strong>Dirección de recogida:</strong> {upcomingTrip.pickupAddress}
@@ -791,6 +816,7 @@ return (
                             </div>
                         </div>
                     ) : (
+                        /*Mensaje cuando no hay viajes próximos*/
                         <div style={{ textAlign: "center", padding: "40px", color: colors.text }}>
                             <p style={{ fontSize: "1.1rem" }}>🛣️ No tienes viajes reservados próximos.</p>
                             <p style={{ marginTop: "10px", fontSize: "0.9rem", color: "#666" }}>

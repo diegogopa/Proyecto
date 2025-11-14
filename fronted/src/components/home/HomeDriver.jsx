@@ -1,4 +1,7 @@
-// HomeDriver.jsx
+//src/components/home/HomeDriver.jsx
+//Componente principal de la vista Home para usuarios Conductores
+//Incluye: creación de viajes, gestión de solicitudes pendientes, viajes creados y viaje actual
+
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import colors from '../../assets/Colors.jsx';
@@ -8,7 +11,7 @@ import profilePhoto from '../../assets/ProfilePhoto.png';
 import iconHome from "../../assets/Home.png";
 import iconReservedTravel from "../../assets/ReservedTravel.png";
 import iconCurrentTravel from "../../assets/CurrentTravel.png";
-import CreateTrip from '../trips/CreateTrip.jsx';
+import CreateTrip from '../trips/CreateTrip.jsx'; //Componente para crear un nuevo viaje
 
 // --- Estilos ---
 const HomeContainer = styled.div`
@@ -255,21 +258,23 @@ const SubmitButton = styled.button`
   }
 `;
 
+//Componente principal HomeDriver para usuarios Conductores
 function HomeDriver() {
-  const [userName, setUserName] = useState("Conductor");
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("home");
-  const [showModal, setShowModal] = useState(false);
-  const [departureTime, setDepartureTime] = useState('');
-  const [fromLocation, setFromLocation] = useState('');
-  const [toLocation, setToLocation] = useState('');
-  const [price, setPrice] = useState('');
-  const [trips, setTrips] = useState([]);
-  const [pendingRequests, setPendingRequests] = useState([]);
-  const [isLoadingRequests, setIsLoadingRequests] = useState(false);
+  const [userName, setUserName] = useState("Conductor"); //Nombre del conductor
+  const [menuOpen, setMenuOpen] = useState(false); //Estado del menú desplegable
+  const [activeTab, setActiveTab] = useState("home"); //Pestaña activa (home, pending, reserved, current)
+  const [showModal, setShowModal] = useState(false); //Estado del modal de crear viaje
+  const [departureTime, setDepartureTime] = useState(''); //Hora de salida (no se usa directamente, viene del CreateTrip)
+  const [fromLocation, setFromLocation] = useState(''); //Origen (no se usa directamente)
+  const [toLocation, setToLocation] = useState(''); //Destino (no se usa directamente)
+  const [price, setPrice] = useState(''); //Precio (no se usa directamente)
+  const [trips, setTrips] = useState([]); //Lista de viajes creados por el conductor
+  const [pendingRequests, setPendingRequests] = useState([]); //Solicitudes pendientes de aprobación
+  const [isLoadingRequests, setIsLoadingRequests] = useState(false); //Estado de carga de solicitudes
 
   const navigate = useNavigate();
 
+  //Obtiene el nombre del usuario del localStorage al montar el componente
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
     if (storedUser && storedUser.nombre) {
@@ -277,37 +282,39 @@ function HomeDriver() {
     }
   }, []);
 
+  //Obtiene los viajes creados por el conductor cuando está en las pestañas "reserved" o "current"
   useEffect(() => {
     const fetchUserTrips = async () => {
       const storedUser = JSON.parse(localStorage.getItem("user"));
       if (!storedUser?._id) return;
       
       try {
-        // Obtener los viajes del backend para asegurar que están actualizados
+        //Obtiene los viajes del backend para asegurar que están actualizados
         const res = await fetch(`https://proyecto5-vs2l.onrender.com/api/trips/${storedUser._id}`);
         if (res.ok) {
           const data = await res.json();
           setTrips(data.trips || []);
-          // Actualizar localStorage con los viajes del backend
+          //Actualiza localStorage con los viajes del backend
           storedUser.trips = data.trips || [];
           localStorage.setItem("user", JSON.stringify(storedUser));
         } else {
-          // Si falla, usar los del localStorage como fallback
+          //Si falla, usa los del localStorage como fallback
           if (storedUser?.trips) setTrips(storedUser.trips);
         }
       } catch (error) {
         console.error("Error fetching user trips:", error);
-        // Fallback a localStorage
+        //Fallback a localStorage
         if (storedUser?.trips) setTrips(storedUser.trips);
       }
     };
     
+    //Solo obtiene los viajes cuando está en las pestañas relevantes
     if (activeTab === "reserved" || activeTab === "current") {
       fetchUserTrips();
     }
   }, [activeTab]);
 
-  // Obtener solicitudes pendientes
+  //Obtiene las solicitudes pendientes de aprobación cuando está en la pestaña "pending"
   useEffect(() => {
     const fetchPendingRequests = async () => {
       const storedUser = JSON.parse(localStorage.getItem("user"));
@@ -319,38 +326,36 @@ function HomeDriver() {
       try {
         setIsLoadingRequests(true);
         const url = `https://proyecto5-vs2l.onrender.com/api/drivers/${storedUser._id}/pending-requests`;
-        console.log("🔍 Buscando solicitudes pendientes en:", url);
-        console.log("👤 ID del conductor:", storedUser._id);
         
         const res = await fetch(url);
         
         if (res.ok) {
           const data = await res.json();
-          console.log("✅ Solicitudes recibidas:", data.requests?.length || 0);
-          console.log("📋 Datos completos:", data);
           setPendingRequests(data.requests || []);
         } else {
           const errorData = await res.json().catch(() => ({ message: "Error desconocido" }));
-          console.error("❌ Error al obtener solicitudes:", res.status, errorData);
+          console.error("Error al obtener solicitudes:", res.status, errorData);
           setPendingRequests([]);
         }
       } catch (error) {
-        console.error("❌ Error fetching pending requests:", error);
+        console.error("Error fetching pending requests:", error);
         setPendingRequests([]);
       } finally {
         setIsLoadingRequests(false);
       }
     };
     
+    //Solo obtiene las solicitudes cuando está en la pestaña "pending"
     if (activeTab === "pending") {
       fetchPendingRequests();
     }
   }, [activeTab]);
 
-  // Próximo viaje
+  //Obtiene el próximo viaje del conductor basado en la hora de salida
   const getNextTrip = () => {
     if (!trips.length) return null;
     const now = new Date();
+    //Convierte cada viaje a un objeto con fecha/hora para comparar
     const upcomingTrips = trips
       .map(t => {
         const [hours, minutes] = t.departureTime.split(":").map(Number);
@@ -358,14 +363,16 @@ function HomeDriver() {
         tripDate.setHours(hours, minutes, 0, 0);
         return { ...t, tripDate };
       })
-      .filter(t => t.tripDate >= now);
+      .filter(t => t.tripDate >= now); //Filtra solo los que aún no han pasado
     if (!upcomingTrips.length) return null;
+    //Ordena por fecha/hora (más próximo primero)
     upcomingTrips.sort((a, b) => a.tripDate - b.tripDate);
-    return upcomingTrips[0];
+    return upcomingTrips[0]; //Retorna el más próximo
   };
 
-  // Eliminar viaje
+  //Elimina un viaje creado por el conductor
   const handleDeleteTrip = async (tripId, index) => {
+    //Pide confirmación antes de eliminar
     if (!window.confirm("¿Estás seguro de que quieres eliminar este viaje?")) {
       return;
     }
@@ -456,6 +463,7 @@ function HomeDriver() {
     }
   };
 
+  //Crea un nuevo viaje desde el componente CreateTrip
   const handleSubmit = async (tripData) => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
     if (!storedUser?._id) {
@@ -463,12 +471,14 @@ function HomeDriver() {
       return;
     }
 
+    //Agrega el ID del usuario al objeto del viaje
     const finalTripData = {
       ...tripData,
       userId: storedUser._id,
     };
 
     try {
+      //Envía la petición POST para crear el viaje
       const res = await fetch("https://proyecto5-vs2l.onrender.com/api/trips", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -479,10 +489,10 @@ function HomeDriver() {
 
       if (!res.ok) throw new Error(data.message || "No se pudo crear el tramo 😢");
 
-      // Actualizar el usuario local con el nuevo trip
+      //Actualiza el usuario local con el nuevo viaje
       const updatedUser = { ...storedUser };
-      // El backend devuelve el trip creado directamente (sin el objeto trips)
-      const tripData = {
+      //El backend devuelve el viaje creado directamente
+      const newTripData = {
         _id: data._id,
         departureTime: data.departureTime,
         fromLocation: data.fromLocation,
@@ -492,7 +502,7 @@ function HomeDriver() {
         cupos: data.cupos,
         createdAt: data.createdAt
       };
-      updatedUser.trips = [...(storedUser.trips || []), tripData];
+      updatedUser.trips = [...(storedUser.trips || []), newTripData];
       localStorage.setItem("user", JSON.stringify(updatedUser));
       setTrips(updatedUser.trips);
 
@@ -506,7 +516,7 @@ function HomeDriver() {
     }
   };
 
-  // Aceptar o rechazar una solicitud
+  //Acepta o rechaza una solicitud de reserva
   const handleRequestAction = async (reservationId, action) => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
     if (!storedUser?._id) {
@@ -514,11 +524,13 @@ function HomeDriver() {
       return;
     }
 
+    //Determina el estado según la acción (accept o reject)
     const status = action === "accept" ? "Aceptada" : "Rechazada";
     const confirmMessage = action === "accept" 
       ? "¿Estás seguro de que quieres aceptar esta solicitud?"
       : "¿Estás seguro de que quieres rechazar esta solicitud?";
 
+    //Pide confirmación antes de proceder
     if (!window.confirm(confirmMessage)) {
       return;
     }
@@ -595,11 +607,14 @@ function HomeDriver() {
         </NavMenu>
 
         <ContentWrapper>
+          {/*Pestaña Home: Pantalla de bienvenida con botones de acción*/}
           {activeTab === "home" && (
             <GreetingContainer>
               <GreetingLeft>¡Hola {userName || "Conductor"}! 🚗</GreetingLeft>
               <div style={{ display: "flex", gap: "10px" }}>
+                {/*Botón para abrir el modal de crear viaje*/}
                 <CreateButton onClick={() => setShowModal(true)}>+ Crear tramo</CreateButton>
+                {/*Botón para ir a la pestaña de solicitudes pendientes*/}
                 <CreateButton onClick={() => setActiveTab("pending")} style={{ backgroundColor: colors.details }}>
                   📋 Ver viajes pendientes
                 </CreateButton>
@@ -607,6 +622,7 @@ function HomeDriver() {
             </GreetingContainer>
           )}
 
+          {/*Pestaña Pending: Lista de solicitudes pendientes de aprobación*/}
           {activeTab === "pending" && (
             <>
               <h3 style={{ textAlign: "center", color: colors.text, marginBottom: "20px" }}>
@@ -619,6 +635,7 @@ function HomeDriver() {
                 <p style={{ textAlign: "center", color: colors.text }}>No hay solicitudes pendientes 😊</p>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+                  {/*Mapea cada solicitud pendiente y muestra una tarjeta con opciones de aceptar/rechazar*/}
                   {pendingRequests.map((request) => (
                     <div
                       key={request._id}
@@ -710,6 +727,7 @@ function HomeDriver() {
             </>
           )}
 
+          {/*Pestaña Reserved: Lista de viajes creados por el conductor*/}
           {activeTab === "reserved" && (
             <>
               <h3 style={{ textAlign: "center", color: colors.text, marginBottom: "20px" }}>
@@ -719,6 +737,7 @@ function HomeDriver() {
               {trips.length === 0 ? (
                 <p style={{ textAlign: "center", color: colors.text }}>Aún no has creado viajes 😢</p>
               ) : (
+                /*Mapea cada viaje creado y muestra una tarjeta con opción de eliminar*/
                 trips.map((trip, index) => (
                   <div key={index} style={{ 
                     background: "white",
@@ -761,8 +780,9 @@ function HomeDriver() {
             </>
           )}
 
+          {/*Pestaña Current: Muestra el viaje más próximo del conductor*/}
           {activeTab === "current" && (() => {
-            const nextTrip = getNextTrip();
+            const nextTrip = getNextTrip(); //Obtiene el viaje más próximo
             return (
               <>
                 <h3 style={{ textAlign: "center", color: colors.text, marginBottom: "20px" }}>
@@ -772,6 +792,7 @@ function HomeDriver() {
                 {!nextTrip ? (
                   <p style={{ textAlign: "center", color: colors.text }}>No hay viajes próximos 😢</p>
                 ) : (
+                  /*Muestra los detalles del viaje más próximo*/
                   <div style={{
                     background: "white",
                     padding: "15px",
@@ -793,11 +814,12 @@ function HomeDriver() {
         </ContentWrapper>
       </HomeContainer>
 
+      {/*Modal para crear un nuevo viaje*/}
       <ModalOverlay open={showModal}>
         <ModalContent>
           <CreateTrip
-          onTripSubmit={handleSubmit} // Le pasamos la función que llama a la API
-          onClose={() => setShowModal(false)} // Le pasamos la función para cerrar
+          onTripSubmit={handleSubmit} //Función que se ejecuta al crear el viaje
+          onClose={() => setShowModal(false)} //Función para cerrar el modal
         />
         </ModalContent>
       </ModalOverlay>

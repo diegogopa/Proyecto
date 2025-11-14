@@ -1,3 +1,9 @@
+//src/components/header/NavigationMenu.jsx
+//Menú de navegación principal de la aplicación.
+//Se encarga de mostrar las opciones de navegación, el selector de rol (Pasajero/Conductor) y el icono de perfil.
+//Redux es una biblioteca de JavaScript para el manejo de estados en la aplicación.
+
+//Hooks
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -8,114 +14,118 @@ import { AiOutlineCar, AiOutlineUser } from 'react-icons/ai';
 import FeedbackModal from '../common/FeedbackModal.jsx'; 
 import logo from '../../assets/Logo.png'; 
 
+// Componentes estilizados importados desde NavigationStyle.jsx
 import { 
-    NavContainer, 
-    Logo, 
-    CentralMenu, 
-    MenuItem, 
-    MenuIcon, 
-    MenuText, 
-    RightIcons, 
-    RoleIcon, 
-    ProfileIcon 
+    NavContainer,      // Contenedor principal del navbar
+    Logo,              // Imagen del logo
+    CentralMenu,       // Menú central con las opciones de navegación
+    MenuItem,          // Cada item del menú (Inicio, Viajes, etc.)
+    MenuIcon,          // Icono de cada item del menú
+    MenuText,          // Texto de cada item del menú
+    RightIcons,        // Contenedor de los iconos de la derecha (rol y perfil)
+    RoleIcon,          // Icono del selector de rol (Pasajero/Conductor)
+    ProfileIcon        // Icono del perfil de usuario
 } from './NavigationStyle.jsx'; 
 
+//Este componente inicial es NavigationMenu y renderiza la barra de navegación superior de la aplicación.
+//Incluye: logo, menú de navegación, selector de rol y perfil.
+
 function NavigationMenu() {
-    const navigate = useNavigate();
-    const location = useLocation();
-    const path = location.pathname;
-
-    // 🛑 USAR REDUX PARA EL ESTADO DEL ROL
-    const dispatch = useDispatch();
-    const role = useSelector(selectUserRole);
-    const hasCar = useSelector(selectHasCar); // Lee si el usuario tiene carro
-    const isConductor = role === 'conductor'; // 🛑 Variable derivada de Redux
-
-    const [isLogged, setIsLogged] = useState(false);
-
-    // 🛑 Modales: Usaremos un solo estado de modal
+    const navigate = useNavigate(); //Permite navegar a otras pages
+    const location = useLocation(); //Obtiene la page actual
+    const path = location.pathname; //Obtiene el nombre de la page actual
+    const dispatch = useDispatch(); //Permite enviar acciones a Redux y modificar el estado global
+    const role = useSelector(selectUserRole); //Obtiene el rol actual del usuario desde Redux ('pasajero' o 'conductor')
+    const hasCar = useSelector(selectHasCar);  //verifica si el usuario tiene un carro registrado (requisto para ser conductor)
+    const isConductor = role === 'conductor'; //Manejo ddel menu según el rol
+    const [isLogged, setIsLogged] = useState(false); //Manejo de la autenticación del usuario por token
+    //Manejo de modales
     const [showModal, setShowModal] = useState(false);
-    const [modalType, setModalType] = useState(null); // 'confirm' o 'carError'
-    const [pendingRole, setPendingRole] = useState(null); // Almacena el rol al que se intenta cambiar
+    const [modalType, setModalType] = useState(null);
+    const [pendingRole, setPendingRole] = useState(null); //Almacena temporalmente el rol al que el usuario quiere cambiar
 
+    //Cambiar de modo (Pasajero/Conductor)
     const confirmToggleMode = (targetRole) => {
         setPendingRole(targetRole);
         
         if (targetRole === 'conductor') {
-            // Si intenta cambiar a Conductor
             if (!hasCar) {
-                // 🛑 No tiene carro: Muestra modal de error (usando el tipo 'error' del FeedbackModal)
+                // Si no tiene carro
                 setModalType('carError');
                 setShowModal(true);
-                return; 
+                return;
             }
         }
         
-        // 🛑 Muestra modal de confirmación si tiene carro o si intenta cambiar a Pasajero
         setModalType('confirm');
         setShowModal(true);
     };
 
+    //Confirmar cambio de rol
     const handleConfirmChange = () => {
         setShowModal(false);
+        
         if (pendingRole) {
-            dispatch(setRole(pendingRole)); // 🛑 CAMBIA EL ROL EN REDUX
+            dispatch(setRole(pendingRole));
             
-            // 🛑 Lógica de redirección según el requerimiento:
-            if (pendingRole === 'conductor') {
-                navigate('/conductor-home'); // O la ruta que definas para el inicio del conductor
+            if (pendingRole === 'conductor') { 
+                // Si cambió a conductor, va a la página de inicio del conductor
+                navigate('/conductor-home');
             } else {
-                navigate('/home'); // Redirige a Home de Pasajero
+                // Si cambió a pasajero, va a la página de inicio del pasajero
+                navigate('/home');
             }
         }
     };
 
-    // Función para manejar la cancelación (vuelve a la vista actual, /home en caso de error)
+    //Modal cancelar y ruta al home 
     const handleCancel = () => {
         setShowModal(false);
-        // Si cancela, el usuario se queda en la vista actual. 
-        // Si el modal de error aparece en otra ruta, al cancelar debería ir a /home.
+        
         if (modalType === 'carError') {
              navigate('/home'); 
         }
     };
 
-    // Efecto para verificar la autenticación (si hay token)
+    //Verificación de autenticación
     useEffect(() => {
-        const token = localStorage.getItem('token');
-        setIsLogged(!!token);
-        if (!token && path !== '/') { // Si no hay token y no estás en la página de Login
+        const token = localStorage.getItem('token'); // Obtiene el token del localStorage 
+        setIsLogged(!!token); // Convierte el token a booleano: !!token es true si existe, false si es null/undefined
+        
+        if (!token && path !== '/') { //Si no hay token, se redirige a login
             navigate('/');
         }
-    }, [path, navigate]);
+    }, [path, navigate]); 
 
-    // Opciones de menú dinámicas
+    //Opciones de la barra de menú
     const menuOptions = [
-        { path: '/home', icon: faHome, text: 'Inicio' },
+        { path: '/home', icon: faHome, text: 'Inicio' }, //Inicio
         { 
             path: isConductor ? '/created-trips' : '/reserved-trips', 
             icon: faMapMarkerAlt, 
             text: isConductor ? 'Viajes Creados' : 'Viajes Reservados' 
         },
         { path: '/current-trips', icon: faRoad, text: 'Viajes en Curso' },
-        // Si es conductor y no está en la pestaña "Crear Viaje", muestra la opción
         ...(isConductor ? [{ path: '/create-trip', icon: AiOutlineCar, text: 'Crear Viaje' }] : [])
     ];
     
-    if (!isLogged) return null;
+    if (!isLogged) return null; //Si no está logueado, no renderiza el navbar
 
     return (
         <>
             <NavContainer>
-                <Logo src={logo} alt="Campus Go Logo" onClick={() => navigate('/home')} />
+                <Logo 
+                    src={logo} 
+                    alt="Campus Go Logo" 
+                    onClick={() => navigate('/home')} 
+                />
 
-                {/* --- Menú Central Horizontal --- */}
                 <CentralMenu>
                     {menuOptions.map(item => (
                         <MenuItem 
-                            key={item.path} 
-                            active={path === item.path}
-                            onClick={() => navigate(item.path)}
+                            key={item.path}  // Key única para React (requerido en map)
+                            active={path === item.path}  // Resalta la opción si está en esa ruta
+                            onClick={() => navigate(item.path)}  // Navega a la ruta al hacer clickk
                         >
                             <MenuIcon active={path === item.path}>
                                 <FontAwesomeIcon icon={item.icon} />
@@ -125,13 +135,11 @@ function NavigationMenu() {
                     ))}
                 </CentralMenu>
 
-                {/* --- Iconos de Rol y Perfil (Superior Derecha) --- */}
-                <RightIcons>
-                    {/* Selector de Rol Pasajero */}
+                <RightIcons> 
+                     {/* Selector de Rol Pasajero */}
                     <RoleIcon 
                         active={!isConductor} 
                         isDriver={false}
-                        // Clic solo si está en modo Conductor (para cambiar a Pasajero)
                         onClick={isConductor ? () => confirmToggleMode('pasajero') : null} 
                     >
                         <AiOutlineUser />
@@ -141,7 +149,6 @@ function NavigationMenu() {
                     <RoleIcon 
                         active={isConductor} 
                         isDriver={true}
-                        // Clic solo si está en modo Pasajero (para cambiar a Conductor)
                         onClick={!isConductor ? () => confirmToggleMode('conductor') : null} 
                     >
                         <AiOutlineCar />
@@ -155,27 +162,22 @@ function NavigationMenu() {
 
             </NavContainer>
 
-            {/* --- Modales de Feedback (usando tu componente común) --- */}
-            
-            {/* 🛑 MODAL DE CONFIRMACIÓN DE CAMBIO DE ROL */}
             {showModal && modalType === 'confirm' && (
                 <FeedbackModal
-                    type="question" // Usa el tipo 'question' para la confirmación
+                    type="question" 
                     message={`¿Estás seguro de cambiar a modo ${pendingRole === 'conductor' ? 'Conductor' : 'Pasajero'}?`}
                     details={`Esta acción afectará la forma en que usas la aplicación.`}
-                    onClose={handleCancel} // Cancelar
-                    onConfirm={handleConfirmChange} // Aceptar
+                    onClose={handleCancel}      // Cuando cancela (cierra modal)
+                    onConfirm={handleConfirmChange}  // Cuando confirma (cambia rol y navega)
                 />
             )}
 
-            {/* 🛑 MODAL DE ERROR DE CARRO */}
             {showModal && modalType === 'carError' && (
                 <FeedbackModal
-                    type="error" // Usa el tipo 'error' que definimos
+                    type="error"
                     message="No tienes un carro registrado."
                     details="Debes registrar un carro para cambiar a modo conductor."
-                    onClose={handleCancel} // Tanto Aceptar como Cancelar llaman a handleCancel
-                    // No necesitas onConfirm ya que ambos botones cierran la modal y redirigen
+                    onClose={handleCancel}  
                 />
             )}
         </>

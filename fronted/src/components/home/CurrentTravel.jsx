@@ -1,3 +1,6 @@
+//src/components/home/CurrentTravel.jsx
+//Componente que muestra el viaje en curso más próximo del usuario (reservas aceptadas)
+
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import colors from "../../assets/Colors.jsx";
@@ -5,6 +8,7 @@ import logo from "../../assets/Logo.png";
 import profilePhoto from "../../assets/ProfilePhoto.png";
 import { useNavigate } from "react-router-dom";
 
+//Contenedor principal de la página
 const PageContainer = styled.div`
   padding: 20px 40px;
   background-color: #f0f4f7;
@@ -12,6 +16,7 @@ const PageContainer = styled.div`
   flex-grow: 1;
 `;
 
+//Header con logo y perfil
 const HeaderContainer = styled.div`
   display: flex;
   align-items: center;
@@ -20,23 +25,27 @@ const HeaderContainer = styled.div`
   padding-top: 20px;
 `;
 
+//Sección izquierda con logo
 const LeftSection = styled.div`
   display: flex;
   align-items: center;
   gap: 12px;
 `;
 
+//Logo clickeable
 const Logo = styled.img`
   height: 45px;
   cursor: pointer;
 `;
 
+//Título de la página
 const Greeting = styled.h2`
   color: ${colors.text};
   font-weight: 600;
   margin: 0;
 `;
 
+//Imagen de perfil
 const ProfileImage = styled.img`
   width: 42px;
   height: 42px;
@@ -45,6 +54,7 @@ const ProfileImage = styled.img`
   border: 2px solid ${colors.details};
 `;
 
+//Tarjeta del viaje en curso
 const TripCard = styled.div`
   background-color: ${colors.white};
   border-radius: 10px;
@@ -53,12 +63,14 @@ const TripCard = styled.div`
   margin-bottom: 15px;
 `;
 
+//Contenedor de información del viaje
 const TripInfo = styled.div`
   display: flex;
   flex-direction: column;
   gap: 10px;
 `;
 
+//Ruta del viaje (desde → hasta)
 const TripRoute = styled.div`
   font-size: 1.2rem;
   font-weight: 600;
@@ -66,12 +78,14 @@ const TripRoute = styled.div`
   margin-bottom: 10px;
 `;
 
+//Detalle individual del viaje
 const TripDetail = styled.p`
   margin: 5px 0;
   color: ${colors.text};
   font-size: 0.95rem;
 `;
 
+//Mensaje cuando no hay viajes
 const NoTripMessage = styled.div`
   text-align: center;
   padding: 40px;
@@ -79,6 +93,7 @@ const NoTripMessage = styled.div`
   font-size: 1.1rem;
 `;
 
+//Mensaje de carga
 const LoadingMessage = styled.div`
   text-align: center;
   padding: 40px;
@@ -86,14 +101,16 @@ const LoadingMessage = styled.div`
   font-size: 1.1rem;
 `;
 
+//Componente principal que muestra el viaje en curso
 const CurrentTrips = () => {
   const navigate = useNavigate();
-  const [upcomingTrip, setUpcomingTrip] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [upcomingTrip, setUpcomingTrip] = useState(null); //Viaje más próximo
+  const [isLoading, setIsLoading] = useState(true); //Estado de carga
 
-  // Función para convertir hora en formato "HH:MM AM/PM" a minutos del día para comparación
+  //Convierte hora en formato "HH:MM AM/PM" a minutos del día para comparación y ordenamiento
   const timeToMinutes = (timeString) => {
     if (!timeString) return 0;
+    //Regex para extraer horas, minutos y periodo (AM/PM)
     const timeRegex = /(\d{1,2}):(\d{2})\s*(AM|PM)/i;
     const match = timeString.match(timeRegex);
     if (!match) return 0;
@@ -102,19 +119,23 @@ const CurrentTrips = () => {
     const minutes = parseInt(match[2]);
     const period = match[3].toUpperCase();
     
+    //Convierte a formato 24 horas
     if (period === "PM" && hours !== 12) {
       hours += 12;
     } else if (period === "AM" && hours === 12) {
       hours = 0;
     }
     
+    //Retorna el total de minutos desde medianoche
     return hours * 60 + minutes;
   };
 
+  //Efecto que se ejecuta al montar el componente para obtener el viaje más próximo
   useEffect(() => {
     const fetchUpcomingTrip = async () => {
       try {
         setIsLoading(true);
+        //Obtiene el usuario del localStorage
         const storedUser = JSON.parse(localStorage.getItem("user"));
         if (!storedUser?._id) {
           setUpcomingTrip(null);
@@ -122,6 +143,7 @@ const CurrentTrips = () => {
           return;
         }
 
+        //Obtiene todas las reservas del usuario desde la API
         const res = await fetch(`https://proyecto5-vs2l.onrender.com/api/users/${storedUser._id}/reservations`, {
           method: "GET",
           headers: {
@@ -133,7 +155,7 @@ const CurrentTrips = () => {
           const data = await res.json();
           const reservations = data.reservations || [];
           
-          // Filtrar solo reservas aceptadas que tengan detalles del viaje
+          //Filtra solo reservas aceptadas que tengan detalles del viaje
           const acceptedReservations = reservations.filter(
             (reservation) => 
               reservation.status === "Aceptada" && 
@@ -146,14 +168,14 @@ const CurrentTrips = () => {
             return;
           }
 
-          // Ordenar por hora de salida (más próximo primero)
+          //Ordena por hora de salida (más próximo primero) usando la función timeToMinutes
           acceptedReservations.sort((a, b) => {
             const timeA = timeToMinutes(a.tripDetails.horaSalida);
             const timeB = timeToMinutes(b.tripDetails.horaSalida);
             return timeA - timeB;
           });
 
-          // Tomar el viaje más próximo
+          //Toma el viaje más próximo (el primero después de ordenar)
           setUpcomingTrip(acceptedReservations[0]);
         } else {
           console.error("Error fetching reservations:", res.status);
@@ -180,9 +202,11 @@ const CurrentTrips = () => {
         <ProfileImage src={profilePhoto} alt="Perfil" />
       </HeaderContainer>
 
+      {/*Muestra estado de carga mientras obtiene los datos*/}
       {isLoading ? (
         <LoadingMessage>Cargando viaje...</LoadingMessage>
       ) : upcomingTrip ? (
+        /*Muestra la tarjeta con los detalles del viaje más próximo*/
         <TripCard>
           <TripInfo>
             <TripRoute>
@@ -202,6 +226,7 @@ const CurrentTrips = () => {
                 ? upcomingTrip.tripDetails.valor.toLocaleString() 
                 : upcomingTrip.tripDetails.valor || "0"}
             </TripDetail>
+            {/*Muestra dirección de recogida si existe*/}
             {upcomingTrip.pickupAddress && (
               <TripDetail>
                 <strong>Dirección de recogida:</strong> {upcomingTrip.pickupAddress}
@@ -213,6 +238,7 @@ const CurrentTrips = () => {
           </TripInfo>
         </TripCard>
       ) : (
+        /*Mensaje cuando no hay viajes próximos*/
         <NoTripMessage>
           <p>🛣️ No tienes viajes reservados próximos.</p>
           <p style={{ marginTop: "10px", fontSize: "0.9rem", color: "#666" }}>
