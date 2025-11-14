@@ -1,3 +1,7 @@
+//src/pages/CarPhoto.jsx
+//Página para agregar una foto de carro
+//Incluye: formulario para agregar una foto de carro, botón para guardar la foto y botón para volver a la página anterior
+
 import React, { useState } from "react";
 import styled from "styled-components";
 import Colors from "../assets/Colors";

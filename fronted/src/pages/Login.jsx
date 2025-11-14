@@ -1,4 +1,7 @@
 // src/pages/Login.jsx
+//Página para iniciar sesión
+//Incluye: formulario para iniciar sesión, botón para iniciar sesión y botón para volver a la página de registro
+
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import Colors from '../assets/Colors';
@@ -8,7 +11,7 @@ import axios from 'axios';
 import Loader from '../components/common/Loader';
 import FeedbackModal from '../components/common/FeedbackModal';
 
-const API_BASE_URL = "https://proyecto5-vs2l.onrender.com/api"; // backend desplegado
+const API_BASE_URL = "https://proyecto5-vs2l.onrender.com/api"; 
 
 const PageWrapper = styled.div`
   display: flex;
@@ -96,12 +99,9 @@ const Login = () => {
         password: password.trim()
       });
 
-      // ✅ IMPORTANTE: Limpiar cualquier sesión previa antes de guardar el nuevo usuario
-      // Esto evita que se comparta la sesión entre pestañas
       localStorage.removeItem("user");
       localStorage.removeItem("token");
       
-      // Guardar datos de usuario en localStorage
       localStorage.setItem('user', JSON.stringify(response.data.user));
       localStorage.setItem('userEmail', email.trim());
 

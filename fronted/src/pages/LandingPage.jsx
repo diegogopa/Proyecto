@@ -1,4 +1,7 @@
 // src/pages/LandingPage.jsx
+//Página de inicio
+//Incluye: botón para iniciar sesión y botón para registrarse
+
 import React from 'react';
 import styled from 'styled-components';
 import { Link } from 'react-router-dom';
@@ -6,7 +9,7 @@ import Button from '../components/common/Button';
 import logo from '../assets/Logo.png';
 import Colors from '../assets/Colors';
 
-// Fondo general de la página
+//Estilos
 const PageWrapper = styled.div`
   display: flex;
   justify-content: center;

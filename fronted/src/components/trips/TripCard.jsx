@@ -1,11 +1,13 @@
-// Tarjetas que se ven de viajes creados por defecto
+//src/components/trips/TripCard.jsx
+//Componente para mostrar una tarjeta de viaje
+//Incluye: sector, conductor, desde, para, hora salida, valor, cupos y botón de reserva
+
 import React from 'react';
 import styled from 'styled-components';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCar, faPlus } from '@fortawesome/free-solid-svg-icons';
 import colors from '../../assets/Colors';
 
-// Estilos de la tarjeta
 const CardContainer = styled.div`
     background: ${colors.white};
     border-radius: 10px;
@@ -99,7 +101,6 @@ const FullMessage = styled.div`
 `;
 
 const TripCard = ({ sector, conductor, desde, para, horaSalida, valor, cupos, onReserve }) => {
-    // Convertir cupos a número si es necesario
     const cuposNum = typeof cupos === 'string' ? parseInt(cupos) : cupos;
     const isFull = cuposNum === 0;
 

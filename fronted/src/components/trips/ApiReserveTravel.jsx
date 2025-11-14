@@ -1,16 +1,19 @@
+//src/components/trips/ApiReserveTravel.jsx
+//Componente para reservar un viaje pasajero usando API
+//Incluye: selección de cupos, selección de puntos de recogida, confirmación de reserva y manejo de errores
+
 //Reservar viaje pasajero usando API
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import colors from '../../assets/Colors.jsx';
-import MapComponent from '../common/MapComponent.jsx'; // Asegúrate que la ruta sea correcta
+import MapComponent from '../common/MapComponent.jsx'; 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'; 
-import { faCheckCircle, faUser, faMapMarkerAlt } from '@fortawesome/free-solid-svg-icons'; // Icono de check
-import { useDispatch } from 'react-redux'; // 👈 Importar hook de Redux
+import { faCheckCircle, faUser, faMapMarkerAlt } from '@fortawesome/free-solid-svg-icons'; 
+import { useDispatch } from 'react-redux';
 import { createReservation } from "../../components/trips/ReservationSlice.jsx";
 import { useMessage } from '../../contexts/MessageContext';
 
-// --- Estilos para la Reserva ---
-
+//Estilos para la Reserva
 const ReserveContainer = styled.div`
     display: flex;
     justify-content: center;
@@ -19,7 +22,7 @@ const ReserveContainer = styled.div`
     background-color: #f0f4f7; /* Fondo del ContentWrapper */
 `;
 
-// Estilo del Contenedor de Formulario/Mapa (el bloque oscuro)
+// Estilo del Contenedor de Formulario/Mapa
 const FormCard = styled.div`
     background-color: #2c3e50; /* Color azul oscuro/gris de tu diseño */
     color: ${colors.white};
@@ -150,8 +153,7 @@ const CancelButton = styled.button`
     }
 `;
 
-// --- Estilos de Confirmación ---
-
+//Estilos de Confirmación
 const ConfirmationCard = styled(FormCard)`
     background-color: #2c3e50;
     text-align: center;
@@ -183,33 +185,29 @@ const ListoButton = styled(ReserveButton)`
     width: auto;
 `;
 
-// --- Componente Principal ---
-
 // Recibe el trip y la función para volver al Home
 function ReserveTrip({ trip, onFinishReservation }) {
-    const dispatch = useDispatch(); // 👈 Inicializar el dispatch de Redux
+    const dispatch = useDispatch(); 
     const { showError } = useMessage();
-    const [step, setStep] = useState('seats'); // 'seats', 'pickup' o 'confirmation'
+    const [step, setStep] = useState('seats'); 
     const [numberOfSeats, setNumberOfSeats] = useState(1);
-    const [pickupAddresses, setPickupAddresses] = useState(['']); // Array de direcciones, una por cada cupo
-    const [currentSeatIndex, setCurrentSeatIndex] = useState(0); // Índice del cupo actual que se está configurando
+    const [pickupAddresses, setPickupAddresses] = useState(['']);
+    const [currentSeatIndex, setCurrentSeatIndex] = useState(0); 
 
     // Verificar cupos al cargar el componente
     const cuposNum = typeof trip.cupos === 'string' ? parseInt(trip.cupos) : trip.cupos;
-    const maxSeats = Math.min(cuposNum, 10); // Máximo 10 cupos o los disponibles
+    const maxSeats = Math.min(cuposNum, 10);
 
     // Actualizar el array de direcciones cuando cambia el número de cupos
     useEffect(() => {
         setPickupAddresses(prev => {
             if (numberOfSeats > prev.length) {
-                // Agregar direcciones vacías para los nuevos cupos
                 const newAddresses = [...prev];
                 while (newAddresses.length < numberOfSeats) {
                     newAddresses.push('');
                 }
                 return newAddresses;
             } else if (numberOfSeats < prev.length) {
-                // Reducir el array si se disminuye el número de cupos
                 return prev.slice(0, numberOfSeats);
             }
             return prev;
@@ -225,7 +223,6 @@ function ReserveTrip({ trip, onFinishReservation }) {
         setCurrentSeatIndex(0);
     };
 
-    // ✅ Función para actualizar el estado de la dirección cuando el mapa la selecciona
     const handleAddressSelected = (address) => {
         const newAddresses = [...pickupAddresses];
         newAddresses[currentSeatIndex] = address;
@@ -236,7 +233,6 @@ function ReserveTrip({ trip, onFinishReservation }) {
         if (currentSeatIndex < numberOfSeats - 1) {
             setCurrentSeatIndex(currentSeatIndex + 1);
         } else {
-            // Todos los cupos configurados, proceder a reservar
             handleReserveClick();
         }
     };
@@ -248,14 +244,12 @@ function ReserveTrip({ trip, onFinishReservation }) {
     };
 
     const handleReserveClick = async () => {
-        // Validar que todas las direcciones estén completas
         const incompleteAddresses = pickupAddresses.some(addr => !addr || addr.trim() === '');
         if (incompleteAddresses) {
             showError("Direcciones incompletas", "Por favor, completa todas las direcciones de recogida para cada cupo.");
             return;
         }
 
-        // Obtener el tripId (puede ser trip.tripId o trip.id)
         const tripId = trip.tripId || trip.id;
         if (!tripId) {
             showError("Error", "No se encontró el ID del viaje. Por favor, intenta nuevamente.");
@@ -263,14 +257,12 @@ function ReserveTrip({ trip, onFinishReservation }) {
         }
 
         try {
-            // Obtener el usuario pasajero para guardar la reserva
             const storedUser = JSON.parse(localStorage.getItem('user'));
             if (!storedUser || !storedUser._id) {
                 showError("Sesión no encontrada", "No se encontró la sesión del usuario. Inicia sesión nuevamente.");
                 return;
             }
 
-            // Llamar al endpoint para reservar múltiples cupos
             const response = await fetch(`https://proyecto5-vs2l.onrender.com/api/trips/${tripId}/reserve`, {
                 method: 'POST',
                 headers: {
@@ -285,7 +277,6 @@ function ReserveTrip({ trip, onFinishReservation }) {
 
             if (!response.ok) {
                 const errorData = await response.json();
-                // Mensaje personalizado si está lleno
                 if (errorData.message && errorData.message.includes('cupos')) {
                     showError("Cupos no disponibles", errorData.message);
                 } else {
@@ -294,11 +285,9 @@ function ReserveTrip({ trip, onFinishReservation }) {
                 return;
             }
 
-            // Si todo salió bien, mostrar confirmación
             setStep('confirmation');
         } catch (error) {
-            // El error ya se maneja arriba con el modal
-            // No necesitamos hacer nada adicional aquí
+
         }
     };
 
@@ -308,9 +297,7 @@ function ReserveTrip({ trip, onFinishReservation }) {
 
     const isFull = cuposNum === 0;
 
-    // 0. Vista de Selección de Cupos
     if (step === 'seats') {
-        // Si está lleno, mostrar mensaje
         if (isFull) {
             return (
                 <ReserveContainer>
@@ -368,7 +355,6 @@ function ReserveTrip({ trip, onFinishReservation }) {
         );
     }
 
-    // 1. Vista de Selección de Puntos de Recogida
     if (step === 'pickup') {
         return (
             <ReserveContainer>
@@ -385,14 +371,12 @@ function ReserveTrip({ trip, onFinishReservation }) {
                                 Dirección de recogida para el cupo {currentSeatIndex + 1}
                             </SeatTitle>
                             
-                            {/* ✅ Le pasamos la nueva función al MapComponent */}
                             <div style={{ marginBottom: '15px' }}>
                                 <MapComponent 
                                     onAddressSelect={handleAddressSelected}
                                 />
                             </div>
 
-                            {/* ✅ Enlazamos el TextInput al estado de la dirección actual */}
                             <TextInput
                                 type="text"
                                 placeholder="Selecciona o escribe la dirección de recogida..."
@@ -431,7 +415,6 @@ function ReserveTrip({ trip, onFinishReservation }) {
         );
     }
 
-    // 2. Vista de Confirmación
     if (step === 'confirmation') {
         return (
             <ReserveContainer>

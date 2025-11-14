@@ -1,5 +1,6 @@
 // src/contexts/MessageContext.jsx
 // Contexto global para manejar mensajes de retroalimentación al usuario
+//Incluye: estado de modal, función para mostrar mensaje, función para cerrar modal y función para confirmar mensaje
 
 import React, { createContext, useContext, useState } from 'react';
 import FeedbackModal from '../components/common/FeedbackModal';
@@ -77,4 +78,3 @@ export const MessageProvider = ({ children }) => {
     </MessageContext.Provider>
   );
 };
-

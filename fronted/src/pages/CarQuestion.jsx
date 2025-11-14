@@ -1,3 +1,7 @@
+//src/pages/CarQuestion.jsx
+//Página para preguntar si el usuario quiere registrar un carro
+//Incluye: formulario para preguntar si el usuario quiere registrar un carro, botón para guardar la respuesta y botón para volver a la página anterior
+
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import Colors from "../assets/Colors";
@@ -7,7 +11,7 @@ import axios from "axios";
 import API_BASE_URL from "../config/api";
 import { useMessage } from '../contexts/MessageContext';
 
-// --- Estilos (sin cambios) ---
+//Estilos
 const PageWrapper = styled.div`
   display: flex;
   justify-content: center;
@@ -59,7 +63,6 @@ const CarQuestion = () => {
     // Verificar si el usuario ya tiene carro registrado al cargar el componente
     const checkUserCar = async () => {
       try {
-        // ✅ IMPORTANTE: Obtener primero el email del registro para verificar que coincida
         const userEmail = localStorage.getItem("userEmail");
         if (!userEmail) {
           // Si no hay email del registro, limpiar localStorage y redirigir a login
@@ -71,10 +74,7 @@ const CarQuestion = () => {
 
         const storedUser = JSON.parse(localStorage.getItem("user") || "null");
         
-        // ✅ IMPORTANTE: Verificar que el usuario en localStorage coincida con el email del registro
-        // Esto evita usar la sesión de otra pestaña
         if (storedUser && storedUser.email && storedUser.email === userEmail) {
-          // Primero verificar en localStorage solo si el email coincide
           if (storedUser.placa && storedUser.placa.trim() !== "") {
             const hasCarComplete = storedUser.placa?.trim() &&
                                    storedUser.marca?.trim() &&
@@ -87,7 +87,6 @@ const CarQuestion = () => {
             }
           }
         } else {
-          // Si el usuario en localStorage no coincide con el email del registro, limpiarlo
           localStorage.removeItem("user");
           localStorage.removeItem("token");
         }
@@ -96,7 +95,6 @@ const CarQuestion = () => {
         const res = await axios.get(`${API_BASE_URL}/users/${userEmail}`);
         const user = res.data;
 
-        // ✅ IMPORTANTE: Verificar que el email del usuario obtenido coincida con el email del registro
         if (user.email !== userEmail) {
           localStorage.removeItem("user");
           localStorage.removeItem("userEmail");
@@ -105,19 +103,16 @@ const CarQuestion = () => {
           return;
         }
 
-        // ✅ Validar que todos los campos del carro estén completos
         const hasCarComplete = user.placa?.trim() &&
                               user.marca?.trim() &&
                               user.modelo?.trim() &&
                               user.cupos > 0;
 
         if (hasCarComplete) {
-          // Actualizar localStorage solo si el email coincide
           localStorage.setItem("user", JSON.stringify(user));
           navigate("/home-driver");
         }
       } catch (error) {
-        // Si hay error, limpiar localStorage y dejar que el usuario continúe con el flujo normal
         localStorage.removeItem("user");
         localStorage.removeItem("token");
       }
@@ -140,16 +135,12 @@ const CarQuestion = () => {
         return;
       }
 
-      // ✅ IMPORTANTE: Limpiar cualquier sesión previa antes de obtener los datos del usuario
-      // Esto evita que se use la sesión de otra pestaña
       localStorage.removeItem("user");
       localStorage.removeItem("token");
 
-      // Obtener los datos del usuario desde el backend
       const res = await axios.get(`${API_BASE_URL}/users/${userEmail}`);
       const user = res.data;
 
-      // ✅ IMPORTANTE: Verificar que el email del usuario obtenido coincida con el email del registro
       if (user.email !== userEmail) {
         showError("Error de sesión", "La sesión no coincide. Por favor, inicia sesión nuevamente.");
         localStorage.removeItem("userEmail");
@@ -166,8 +157,6 @@ const CarQuestion = () => {
         return;
       }
 
-      // Si el usuario quiere registrar un carro, verificar si ya tiene uno completo
-      // ✅ Validamos que todos los campos del carro estén completos
       const hasCarComplete =
         user.placa?.trim() &&
         user.marca?.trim() &&
@@ -175,13 +164,12 @@ const CarQuestion = () => {
         user.cupos > 0;
 
       if (hasCarComplete) {
-        navigate("/home-driver"); // ✅ Ya tiene carro con toda la info
+        navigate("/home-driver");
       } else {
-        navigate("/register-car"); // ✅ Le falta completar la info del carro
+        navigate("/register-car");
       }
 
     } catch (error) {
-      // Limpiar localStorage en caso de error
       localStorage.removeItem("user");
       localStorage.removeItem("userEmail");
       localStorage.removeItem("token");

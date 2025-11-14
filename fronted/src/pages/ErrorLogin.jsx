@@ -1,3 +1,7 @@
+//src/pages/ErrorLogin.jsx
+//Página para mostrar un mensaje de error al iniciar sesión
+//Incluye: mensaje de error, botón para volver a la página de inicio y botón para volver a la página de login
+
 import React from "react";
 import styled from "styled-components";
 import Colors from "../assets/Colors";
@@ -5,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { FaTimesCircle } from "react-icons/fa";
 import Button from "../components/common/Button";
 
+//Estilos
 const PageWrapper = styled.div`
   display: flex;
   justify-content: center;

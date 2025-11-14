@@ -1,9 +1,13 @@
 // src/pages/CreateTrip.jsx
+//Página para crear un nuevo tramo
+//Incluye: formulario para crear un nuevo tramo, botón para guardar el tramo y botón para volver a la página anterior
+
 import React, { useState } from 'react';
 import styled from 'styled-components';
-import colors from '../assets/Colors.jsx'; // Ajusta la ruta si es necesario
+import colors from '../assets/Colors.jsx';
 import { useMessage } from '../contexts/MessageContext';
 
+//Estilos
 const Container = styled.div`
   max-width: 500px;
   margin: 40px auto;
@@ -69,7 +73,6 @@ function CreateTrip() {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // Aquí puedes hacer la lógica para enviar los datos a tu backend
     const tripData = {
       departureTime,
       fromLocation,

@@ -1,4 +1,7 @@
-//Crear viaje conductor (tramo)
+//src/components/trips/CreateTrip.jsx
+//Componente para crear un nuevo viaje conductor (tramo)
+//Incluye: selección de origen y destino, selección de hora de salida, selección de cupos disponibles, selección de precio y envío del viaje
+
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import colors from '../../assets/Colors.jsx';
@@ -7,7 +10,6 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMapMarkerAlt, faRoute, faCarSide, faUserFriends, faGlobe} from '@fortawesome/free-solid-svg-icons';
 import { useMessage } from '../../contexts/MessageContext'; 
 
-//Estilo para hacer dos contenedores (mapa y formulario)
 const MainContent = styled.div` 
     display: flex;
     gap: 20px; /* Espacio entre el mapa y el formulario */
@@ -98,7 +100,6 @@ const BackButton = styled(SubmitButton)`
     }
 `;
 
-// Recibe la función de manejo de envío final y una función para cerrar el modal
 function CreateTrip({ onTripSubmit, onClose }) {
     const { showError } = useMessage();
     
@@ -113,7 +114,6 @@ function CreateTrip({ onTripSubmit, onClose }) {
 
     const [currentSelection, setCurrentSelection] = useState('from'); 
 
-    // Actualiza cualquier campo del formulario
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({
@@ -133,11 +133,9 @@ function CreateTrip({ onTripSubmit, onClose }) {
         });
     };
 
-    // 2. Maneja el envío final del tramo
     const handleSubmit = (e) => {
         e.preventDefault();
         
-        // Aquí desestructuramos formData, lo cual ahora es posible
         const { fromLocation, toLocation, departureTime, price, sector, cupos } = formData;
 
         if (!fromLocation || !toLocation || !departureTime || !price || !sector || !cupos) {

@@ -1,4 +1,7 @@
 // src/pages/VerifyCar.jsx
+//Página para verificar si el usuario tiene un carro registrado
+//Incluye: formulario para verificar si el usuario tiene un carro registrado, botón para guardar la respuesta y botón para volver a la página anterior
+
 import React, { useState } from "react";
 import styled from "styled-components";
 import Colors from "../assets/Colors";
@@ -6,6 +9,7 @@ import Button from "../components/common/Button";
 import { useNavigate } from "react-router-dom"; // ✅ agregado
 import { useMessage } from '../contexts/MessageContext';
 
+//Estilos
 const PageWrapper = styled.div`
   display: flex;
   justify-content: center;
@@ -88,9 +92,9 @@ const VerifyCar = () => {
     }
 
     if (answer === "si") {
-      navigate("/home-driver"); // ✅ SI → HomeDriver
+      navigate("/home-driver"); 
     } else {
-      navigate("/car-question"); // ✅ NO → CarQuestion
+      navigate("/car-question"); 
     }
   };
 

@@ -1,4 +1,7 @@
 // src/pages/EditProfile.jsx
+//Página para editar el perfil del usuario
+//Incluye: formulario para editar el perfil del usuario, botón para guardar los cambios y botón para volver a la página anterior
+
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import colors from "../assets/Colors";
@@ -102,7 +105,7 @@ function EditProfile() {
         nombre: storedUser.nombre,
         apellido: storedUser.apellido,
         email: storedUser.email,
-        password: "", // nunca cargamos la contraseña
+        password: "", 
       });
     }
   }, []);
@@ -116,7 +119,6 @@ function EditProfile() {
     try {
       const backendURL = "https://proyecto5-vs2l.onrender.com/api";
 
-      // Preparar payload con los campos modificables
       const payload = {
         nombre: form.nombre,
         apellido: form.apellido,
@@ -130,11 +132,9 @@ function EditProfile() {
         payload
       );
 
-      // Guardamos el usuario actualizado en localStorage (sin password)
       const updatedUser = response.data.user;
       localStorage.setItem("user", JSON.stringify(updatedUser));
 
-      // Mostrar mensaje de éxito y redirigir al Home
       showSuccess("Perfil actualizado", "Tus datos han sido actualizados correctamente.");
       setTimeout(() => {
         navigate("/", { replace: true });

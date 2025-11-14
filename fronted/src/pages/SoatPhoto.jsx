@@ -1,4 +1,7 @@
 // src/pages/SoatPhoto.jsx
+//Página para agregar una foto de SOAT
+//Incluye: formulario para agregar una foto de SOAT, botón para guardar la foto y botón para volver a la página anterior
+
 import React, { useState } from "react";
 import styled from "styled-components";
 import Colors from "../assets/Colors";
@@ -82,9 +85,7 @@ const SoatPhoto = () => {
   const handleNext = async () => {
     try {
       setIsLoading(true);
-      
-      // ✅ IMPORTANTE: Obtener el email del localStorage y verificar que sea del usuario actual
-      // No usar la sesión de otra pestaña
+
       const userEmail = localStorage.getItem("userEmail");
       if (!userEmail) {
         showError("Sesión no encontrada", "No se encontró la información del usuario. Por favor, inicia sesión.");
@@ -92,16 +93,12 @@ const SoatPhoto = () => {
         return;
       }
 
-      // ✅ IMPORTANTE: Limpiar cualquier sesión previa antes de obtener los datos del usuario
-      // Esto evita que se use la sesión de otra pestaña
       localStorage.removeItem("user");
       localStorage.removeItem("token");
 
-      // Obtener los datos del usuario desde el backend usando el email del registro
       const response = await axios.get(`${API_BASE_URL}/users/${userEmail}`);
       const user = response.data;
 
-      // ✅ Verificar que el email del usuario obtenido coincida con el email del registro
       if (user.email !== userEmail) {
         showError("Error de sesión", "La sesión no coincide. Por favor, inicia sesión nuevamente.");
         localStorage.removeItem("userEmail");
@@ -109,13 +106,10 @@ const SoatPhoto = () => {
         return;
       }
 
-      // Guardar los datos del usuario en localStorage como se hace en el login
       localStorage.setItem("user", JSON.stringify(user));
 
-      // Redirigir al home
       navigate("/home");
     } catch (error) {
-      // Limpiar localStorage en caso de error
       localStorage.removeItem("user");
       localStorage.removeItem("userEmail");
       localStorage.removeItem("token");

@@ -1,3 +1,7 @@
+//src/pages/RegisterCar.jsx
+//Página para registrar un nuevo carro
+//Incluye: formulario para registrar un nuevo carro, botón para registrar el carro y botón para volver a la página anterior
+
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import Colors from "../assets/Colors";
@@ -66,7 +70,6 @@ const RegisterCar = () => {
 
   const [userEmail, setUserEmail] = useState("");
 
-  // ✅ NUEVO: Cargar datos del usuario si ya tiene carro registrado
   useEffect(() => {
     const storedEmail = localStorage.getItem("userEmail");
     if (!storedEmail) return navigate("/login");
@@ -83,7 +86,7 @@ const RegisterCar = () => {
         if (user.marca) setMarca(user.marca);
         if (user.modelo) setModelo(user.modelo);
       } catch (err) {
-        // Error silencioso - los datos se cargarán desde el formulario
+
       }
     };
 

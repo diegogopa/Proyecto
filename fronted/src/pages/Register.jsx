@@ -1,4 +1,7 @@
 // src/pages/Register.jsx
+//Página para registrar un nuevo usuario
+//Incluye: formulario para registrar un nuevo usuario, botón para registrar el usuario y botón para volver a la página de inicio
+
 import React, { useState } from "react";
 import styled from "styled-components";
 import Colors from "../assets/Colors";
@@ -122,7 +125,7 @@ const Register = () => {
         cupos: 0,
         marca: "",
         modelo: "",
-        trips: [] // ✅ añadido
+        trips: []
       };
 
       const response = await axios.post(
@@ -134,8 +137,6 @@ const Register = () => {
         }
       );
 
-      // ✅ IMPORTANTE: Limpiar cualquier sesión previa antes de guardar el nuevo usuario
-      // Esto evita que se comparta la sesión entre pestañas
       localStorage.removeItem("user");
       localStorage.removeItem("token");
       

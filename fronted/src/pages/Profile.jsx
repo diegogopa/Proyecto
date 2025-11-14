@@ -1,4 +1,7 @@
 // src/pages/Profile.jsx
+//Página para mostrar el perfil del usuario
+//Incluye: formulario para mostrar el perfil del usuario, botón para volver a la página anterior y botón para cerrar sesión
+
 import React, { useEffect, useState } from "react";
 import styled from "styled-components";
 import colors from "../assets/Colors";
@@ -120,7 +123,7 @@ function Profile() {
         const res = await axios.get(`https://proyecto-y2t3.vercel.app/api/users/${email}`);
         if (res.data) setUser(res.data);
       } catch (err) {
-        // Error silencioso - no es crítico mostrar este error al usuario
+
       }
     };
 
