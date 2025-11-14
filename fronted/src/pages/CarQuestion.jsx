@@ -5,6 +5,7 @@ import Button from "../components/common/Button";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import API_BASE_URL from "../config/api";
+import { useMessage } from '../contexts/MessageContext';
 
 // --- Estilos (sin cambios) ---
 const PageWrapper = styled.div`
@@ -50,6 +51,7 @@ const OptionLabel = styled.label`
 `;
 
 const CarQuestion = () => {
+  const { showError } = useMessage();
   const [answer, setAnswer] = useState("");
   const navigate = useNavigate();
 
@@ -80,7 +82,6 @@ const CarQuestion = () => {
                                    storedUser.cupos > 0;
             
             if (hasCarComplete) {
-              console.log("Usuario ya tiene carro en localStorage, redirigiendo a home-driver");
               navigate("/home-driver");
               return;
             }
@@ -97,7 +98,6 @@ const CarQuestion = () => {
 
         // ✅ IMPORTANTE: Verificar que el email del usuario obtenido coincida con el email del registro
         if (user.email !== userEmail) {
-          console.error("❌ El email del usuario no coincide con el email del registro");
           localStorage.removeItem("user");
           localStorage.removeItem("userEmail");
           localStorage.removeItem("token");
@@ -112,13 +112,11 @@ const CarQuestion = () => {
                               user.cupos > 0;
 
         if (hasCarComplete) {
-          console.log("Usuario ya tiene carro en backend, redirigiendo a home-driver");
           // Actualizar localStorage solo si el email coincide
           localStorage.setItem("user", JSON.stringify(user));
           navigate("/home-driver");
         }
       } catch (error) {
-        console.error("Error al verificar carro del usuario:", error);
         // Si hay error, limpiar localStorage y dejar que el usuario continúe con el flujo normal
         localStorage.removeItem("user");
         localStorage.removeItem("token");
@@ -130,14 +128,14 @@ const CarQuestion = () => {
 
   const handleNext = async () => {
     if (!answer) {
-      alert("Selecciona una opción para continuar");
+      showError("Opción requerida", "Selecciona una opción para continuar");
       return;
     }
 
     try {
       const userEmail = localStorage.getItem("userEmail");
       if (!userEmail) {
-        alert("No se encontró la información del usuario. Por favor, inicia sesión.");
+        showError("Sesión no encontrada", "No se encontró la información del usuario. Por favor, inicia sesión.");
         navigate("/login");
         return;
       }
@@ -153,8 +151,7 @@ const CarQuestion = () => {
 
       // ✅ IMPORTANTE: Verificar que el email del usuario obtenido coincida con el email del registro
       if (user.email !== userEmail) {
-        console.error("❌ El email del usuario no coincide con el email del registro");
-        alert("Error: La sesión no coincide. Por favor, inicia sesión nuevamente.");
+        showError("Error de sesión", "La sesión no coincide. Por favor, inicia sesión nuevamente.");
         localStorage.removeItem("userEmail");
         navigate("/login");
         return;
@@ -184,12 +181,11 @@ const CarQuestion = () => {
       }
 
     } catch (error) {
-      console.error("❌ Error al revisar datos del carro:", error);
       // Limpiar localStorage en caso de error
       localStorage.removeItem("user");
       localStorage.removeItem("userEmail");
       localStorage.removeItem("token");
-      alert("No se pudo verificar la información del usuario. Por favor, inicia sesión.");
+      showError("Error de verificación", "No se pudo verificar la información del usuario. Por favor, inicia sesión.");
       navigate("/login");
     }
   };

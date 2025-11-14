@@ -4,6 +4,7 @@ import styled from "styled-components";
 import Colors from "../assets/Colors";
 import Button from "../components/common/Button";
 import { useNavigate } from "react-router-dom"; // ✅ agregado
+import { useMessage } from '../contexts/MessageContext';
 
 const PageWrapper = styled.div`
   display: flex;
@@ -76,12 +77,13 @@ const OptionLabel = styled.label`
 `;
 
 const VerifyCar = () => {
+  const { showError } = useMessage();
   const [answer, setAnswer] = useState("");
   const navigate = useNavigate();
 
   const handleNext = () => {
     if (!answer) {
-      alert("Por favor selecciona una opción antes de continuar.");
+      showError("Opción requerida", "Por favor selecciona una opción antes de continuar.");
       return;
     }
 

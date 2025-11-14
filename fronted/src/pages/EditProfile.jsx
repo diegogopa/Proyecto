@@ -4,6 +4,7 @@ import styled from "styled-components";
 import colors from "../assets/Colors";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { useMessage } from '../contexts/MessageContext';
 
 const EditContainer = styled.div`
   padding: 40px;
@@ -86,6 +87,7 @@ const CancelButton = styled.button`
 
 function EditProfile() {
   const navigate = useNavigate();
+  const { showError, showSuccess } = useMessage();
   const [form, setForm] = useState({
     nombre: "",
     apellido: "",
@@ -132,11 +134,13 @@ function EditProfile() {
       const updatedUser = response.data.user;
       localStorage.setItem("user", JSON.stringify(updatedUser));
 
-      // Redirigir al Home
-      navigate("/", { replace: true });
+      // Mostrar mensaje de éxito y redirigir al Home
+      showSuccess("Perfil actualizado", "Tus datos han sido actualizados correctamente.");
+      setTimeout(() => {
+        navigate("/", { replace: true });
+      }, 1500);
     } catch (error) {
-      console.error("Error al actualizar perfil:", error.response?.data || error.message);
-      alert(error.response?.data?.message || "Hubo un problema al guardar los cambios");
+      showError("Error al actualizar", error.response?.data?.message || "Hubo un problema al guardar los cambios. Por favor, intenta nuevamente.");
     }
   };
 

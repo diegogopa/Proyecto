@@ -12,6 +12,7 @@ import iconHome from "../../assets/Home.png";
 import iconReservedTravel from "../../assets/ReservedTravel.png";
 import iconCurrentTravel from "../../assets/CurrentTravel.png";
 import CreateTrip from '../trips/CreateTrip.jsx'; //Componente para crear un nuevo viaje
+import { useMessage } from '../../contexts/MessageContext';
 
 // --- Estilos ---
 const HomeContainer = styled.div`
@@ -260,6 +261,7 @@ const SubmitButton = styled.button`
 
 //Componente principal HomeDriver para usuarios Conductores
 function HomeDriver() {
+  const { showError, showSuccess, showQuestion } = useMessage();
   const [userName, setUserName] = useState("Conductor"); //Nombre del conductor
   const [menuOpen, setMenuOpen] = useState(false); //Estado del menú desplegable
   const [activeTab, setActiveTab] = useState("home"); //Pestaña activa (home, pending, reserved, current)
@@ -302,7 +304,7 @@ function HomeDriver() {
           if (storedUser?.trips) setTrips(storedUser.trips);
         }
       } catch (error) {
-        console.error("Error fetching user trips:", error);
+        showError("Error al cargar viajes", "No se pudieron cargar tus viajes. Se mostrarán los guardados localmente.");
         //Fallback a localStorage
         if (storedUser?.trips) setTrips(storedUser.trips);
       }
@@ -319,7 +321,7 @@ function HomeDriver() {
     const fetchPendingRequests = async () => {
       const storedUser = JSON.parse(localStorage.getItem("user"));
       if (!storedUser?._id) {
-        console.error("No se encontró el ID del usuario en localStorage");
+        showError("Usuario no encontrado", "No se encontró el ID del usuario. Por favor, inicia sesión nuevamente.");
         return;
       }
       
@@ -334,11 +336,11 @@ function HomeDriver() {
           setPendingRequests(data.requests || []);
         } else {
           const errorData = await res.json().catch(() => ({ message: "Error desconocido" }));
-          console.error("Error al obtener solicitudes:", res.status, errorData);
+          showError("Error al cargar solicitudes", "No se pudieron cargar las solicitudes pendientes. Por favor, intenta nuevamente.");
           setPendingRequests([]);
         }
       } catch (error) {
-        console.error("Error fetching pending requests:", error);
+        showError("Error al cargar solicitudes", "No se pudieron cargar las solicitudes pendientes. Por favor, intenta nuevamente.");
         setPendingRequests([]);
       } finally {
         setIsLoadingRequests(false);
@@ -372,15 +374,18 @@ function HomeDriver() {
 
   //Elimina un viaje creado por el conductor
   const handleDeleteTrip = async (tripId, index) => {
-    //Pide confirmación antes de eliminar
-    if (!window.confirm("¿Estás seguro de que quieres eliminar este viaje?")) {
-      return;
-    }
+    //Pide confirmación antes de eliminar usando el modal
+    showQuestion("¿Estás seguro de que quieres eliminar este viaje?", "Esta acción no se puede deshacer.", async () => {
+      await proceedWithDelete(tripId, index);
+    });
+  };
+
+  const proceedWithDelete = async (tripId, index) => {
 
     try {
       const storedUser = JSON.parse(localStorage.getItem("user"));
       if (!storedUser?._id) {
-        alert("Usuario no encontrado 😢");
+        showError("Usuario no encontrado", "No se encontró la sesión del usuario. Por favor, inicia sesión nuevamente.");
         return;
       }
 
@@ -398,12 +403,9 @@ function HomeDriver() {
       }
 
       if (!tripToDelete) {
-        console.error("❌ No se pudo identificar el viaje a eliminar", { tripId, index, trips, storedTrips: storedUser.trips });
-        alert("No se pudo identificar el viaje a eliminar");
+        showError("Error al identificar viaje", "No se pudo identificar el viaje a eliminar. Por favor, intenta nuevamente.");
         return;
       }
-
-      console.log("🗑️ Intentando eliminar viaje:", tripToDelete, "Usuario:", storedUser._id);
 
       // Eliminar el trip del backend
       const res = await fetch(`https://proyecto5-vs2l.onrender.com/api/trips/${tripToDelete}`, {
@@ -415,8 +417,6 @@ function HomeDriver() {
           userId: storedUser._id,
         }),
       });
-
-      console.log("📡 Respuesta del servidor:", res.status, res.statusText);
 
       if (res.ok) {
         // Recargar los viajes desde el backend para asegurar que estén actualizados
@@ -441,25 +441,21 @@ function HomeDriver() {
           localStorage.setItem("user", JSON.stringify(storedUser));
         }
 
-        alert("Viaje eliminado exitosamente ✅");
+        showSuccess("Viaje eliminado", "El viaje ha sido eliminado exitosamente.");
       } else {
         let errorMessage = "Error al eliminar el viaje. Por favor, intenta nuevamente.";
         try {
           const errorData = await res.json();
           errorMessage = errorData.message || errorMessage;
-          console.error("❌ Error del servidor:", errorData);
         } catch (jsonError) {
-          console.error("❌ Error parsing error response:", jsonError);
-          console.error("❌ Status:", res.status, "StatusText:", res.statusText);
           if (res.status === 404) {
             errorMessage = "La ruta de eliminación no se encontró. Por favor, verifica que el servidor esté actualizado.";
           }
         }
-        alert(errorMessage);
+        showError("Error al eliminar", errorMessage);
       }
     } catch (error) {
-      console.error("Error deleting trip:", error);
-      alert("Error al eliminar el viaje. Por favor, intenta nuevamente.");
+      showError("Error al eliminar", "Error al eliminar el viaje. Por favor, intenta nuevamente.");
     }
   };
 
@@ -467,7 +463,7 @@ function HomeDriver() {
   const handleSubmit = async (tripData) => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
     if (!storedUser?._id) {
-      alert("Usuario no encontrado 😢");
+      showError("Usuario no encontrado", "No se encontró la sesión del usuario. Por favor, inicia sesión nuevamente.");
       return;
     }
 
@@ -506,13 +502,12 @@ function HomeDriver() {
       localStorage.setItem("user", JSON.stringify(updatedUser));
       setTrips(updatedUser.trips);
 
-      alert("Tramo creado correctamente 🚗");
+      showSuccess("Tramo creado", "El tramo ha sido creado correctamente.");
 
       setShowModal(false);
       
     } catch (error) {
-      alert(error.message);
-      console.error(error);
+      showError("Error al crear tramo", error.message || "No se pudo crear el tramo. Por favor, intenta nuevamente.");
     }
   };
 
@@ -520,7 +515,7 @@ function HomeDriver() {
   const handleRequestAction = async (reservationId, action) => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
     if (!storedUser?._id) {
-      alert("Usuario no encontrado 😢");
+      showError("Usuario no encontrado", "No se encontró la sesión del usuario. Por favor, inicia sesión nuevamente.");
       return;
     }
 
@@ -529,11 +524,17 @@ function HomeDriver() {
     const confirmMessage = action === "accept" 
       ? "¿Estás seguro de que quieres aceptar esta solicitud?"
       : "¿Estás seguro de que quieres rechazar esta solicitud?";
+    const confirmDetails = action === "accept"
+      ? "El pasajero será notificado de la aceptación."
+      : "El pasajero será notificado del rechazo.";
 
-    //Pide confirmación antes de proceder
-    if (!window.confirm(confirmMessage)) {
-      return;
-    }
+    //Pide confirmación antes de proceder usando el modal
+    showQuestion(confirmMessage, confirmDetails, async () => {
+      await proceedWithRequestAction(reservationId, action, status, storedUser._id);
+    });
+  };
+
+  const proceedWithRequestAction = async (reservationId, action, status, userId) => {
 
     try {
       const res = await fetch(`https://proyecto5-vs2l.onrender.com/api/reservations/${reservationId}/status`, {
@@ -541,25 +542,24 @@ function HomeDriver() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           status: status,
-          driverId: storedUser._id,
+          driverId: userId,
         }),
       });
 
       const data = await res.json();
 
-      if (!res.ok) throw new Error(data.message || "No se pudo procesar la solicitud 😢");
+      if (!res.ok) throw new Error(data.message || "No se pudo procesar la solicitud.");
 
-      alert(`Solicitud ${status.toLowerCase()} exitosamente ✅`);
+      showSuccess(`Solicitud ${status.toLowerCase()}`, `La solicitud ha sido ${status.toLowerCase()} exitosamente.`);
 
       // Recargar las solicitudes pendientes
-      const refreshRes = await fetch(`https://proyecto5-vs2l.onrender.com/api/drivers/${storedUser._id}/pending-requests`);
+      const refreshRes = await fetch(`https://proyecto5-vs2l.onrender.com/api/drivers/${userId}/pending-requests`);
       if (refreshRes.ok) {
         const refreshData = await refreshRes.json();
         setPendingRequests(refreshData.requests || []);
       }
     } catch (error) {
-      alert(error.message);
-      console.error(error);
+      showError("Error al procesar solicitud", error.message || "No se pudo procesar la solicitud. Por favor, intenta nuevamente.");
     }
   };
 

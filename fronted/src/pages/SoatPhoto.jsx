@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import AddPhoto from "../components/common/AddPhoto";
 import CarIcon from "../assets/AddPhoto.png";
 import axios from "axios";
+import { useMessage } from '../contexts/MessageContext';
 
 const API_BASE_URL = "https://proyecto5-vs2l.onrender.com/api";
 
@@ -73,6 +74,7 @@ const ButtonsRow = styled.div`
 `;
 
 const SoatPhoto = () => {
+  const { showError } = useMessage();
   const [photo, setPhoto] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -85,7 +87,7 @@ const SoatPhoto = () => {
       // No usar la sesión de otra pestaña
       const userEmail = localStorage.getItem("userEmail");
       if (!userEmail) {
-        alert("No se encontró la información del usuario. Por favor, inicia sesión.");
+        showError("Sesión no encontrada", "No se encontró la información del usuario. Por favor, inicia sesión.");
         navigate("/login");
         return;
       }
@@ -101,8 +103,7 @@ const SoatPhoto = () => {
 
       // ✅ Verificar que el email del usuario obtenido coincida con el email del registro
       if (user.email !== userEmail) {
-        console.error("❌ El email del usuario no coincide con el email del registro");
-        alert("Error: La sesión no coincide. Por favor, inicia sesión nuevamente.");
+        showError("Error de sesión", "La sesión no coincide. Por favor, inicia sesión nuevamente.");
         localStorage.removeItem("userEmail");
         navigate("/login");
         return;
@@ -114,12 +115,11 @@ const SoatPhoto = () => {
       // Redirigir al home
       navigate("/home");
     } catch (error) {
-      console.error("Error al obtener datos del usuario:", error);
       // Limpiar localStorage en caso de error
       localStorage.removeItem("user");
       localStorage.removeItem("userEmail");
       localStorage.removeItem("token");
-      alert("Error al cargar la información del usuario. Por favor, inicia sesión.");
+      showError("Error al cargar", "Error al cargar la información del usuario. Por favor, inicia sesión.");
       navigate("/login");
     } finally {
       setIsLoading(false);

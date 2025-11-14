@@ -7,6 +7,7 @@ import colors from "../../assets/Colors.jsx";
 import logo from "../../assets/Logo.png";
 import profilePhoto from "../../assets/ProfilePhoto.png";
 import { useNavigate } from "react-router-dom";
+import { useMessage } from '../../contexts/MessageContext';
 
 //Contenedor principal de la página
 const PageContainer = styled.div`
@@ -104,6 +105,7 @@ const LoadingMessage = styled.div`
 //Componente principal que muestra el viaje en curso
 const CurrentTrips = () => {
   const navigate = useNavigate();
+  const { showError } = useMessage();
   const [upcomingTrip, setUpcomingTrip] = useState(null); //Viaje más próximo
   const [isLoading, setIsLoading] = useState(true); //Estado de carga
 
@@ -178,11 +180,11 @@ const CurrentTrips = () => {
           //Toma el viaje más próximo (el primero después de ordenar)
           setUpcomingTrip(acceptedReservations[0]);
         } else {
-          console.error("Error fetching reservations:", res.status);
+          showError("Error al cargar viaje", "No se pudo cargar el viaje próximo. Por favor, intenta nuevamente.");
           setUpcomingTrip(null);
         }
       } catch (error) {
-        console.error("Error fetching upcoming trip:", error);
+        showError("Error al cargar viaje", "No se pudo cargar el viaje próximo. Por favor, intenta nuevamente.");
         setUpcomingTrip(null);
       } finally {
         setIsLoading(false);

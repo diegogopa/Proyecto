@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import FeedbackModal from "../components/common/FeedbackModal";
 import API_BASE_URL from "../config/api";
+import { useMessage } from '../contexts/MessageContext';
 
 const PageWrapper = styled.div`
   display: flex;
@@ -82,7 +83,7 @@ const RegisterCar = () => {
         if (user.marca) setMarca(user.marca);
         if (user.modelo) setModelo(user.modelo);
       } catch (err) {
-        console.error("❌ Error cargando datos del usuario", err);
+        // Error silencioso - los datos se cargarán desde el formulario
       }
     };
 
@@ -117,7 +118,6 @@ const RegisterCar = () => {
       setModalDetails(response.data.message || "Tu carro se guardó correctamente.");
       setShowModal(true);
     } catch (error) {
-      console.error("❌ Error al actualizar carro:", error);
       setModalType("no");
       setModalMessage("Error al registrar carro");
       setModalDetails(error.response?.data?.message || "Intenta nuevamente más tarde.");

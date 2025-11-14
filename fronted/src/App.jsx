@@ -16,6 +16,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import './App.css';
 import { useSelector } from 'react-redux';
 import styled from 'styled-components';
+import { MessageProvider } from './contexts/MessageContext';
 
 // Importa las páginas
 import LandingPage from './pages/LandingPage.jsx';
@@ -100,9 +101,10 @@ function App() {
   const isAuthenticated = !!token;
 
   return (
-    <Router>
-      <Layout>
-        <Routes>
+    <MessageProvider>
+      <Router>
+        <Layout>
+          <Routes>
           {/* ============================================
               RUTAS PÚBLICAS
               Estas rutas son accesibles sin autenticación
@@ -167,6 +169,7 @@ function App() {
         </Routes>
       </Layout>
     </Router>
+    </MessageProvider>
   );
 }
 

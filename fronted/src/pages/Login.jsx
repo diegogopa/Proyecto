@@ -111,7 +111,6 @@ const Login = () => {
       setShowModal(true);
 
     } catch (error) {
-      console.error(error);
       setModalMessage('Error de Sesión');
       setModalDetails(error.response?.data?.message || 'Correo o contraseña incorrectos.');
       setModalType('no');

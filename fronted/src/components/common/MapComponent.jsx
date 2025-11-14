@@ -44,7 +44,7 @@ const MapComponent = ({ onAddressSelect, origin, destination, currentSelection }
 
         callback(location);
       } else {
-        console.error('Error en geocodificación:', status);
+        // Error en geocodificación - se maneja silenciosamente
         callback(null);
       }
     });
@@ -96,7 +96,6 @@ const MapComponent = ({ onAddressSelect, origin, destination, currentSelection }
             mapRef.current.fitBounds(bounds);
           }
         } else {
-          console.error('Error al calcular la ruta:', status);
           setRouteError('No se pudo calcular la ruta');
           setDirectionsResponse(null);
         }
@@ -126,10 +125,8 @@ const MapComponent = ({ onAddressSelect, origin, destination, currentSelection }
         if (onAddressSelect) {
           onAddressSelect(address); // Llama a la función de prop con la nueva dirección
         }
-
-        console.log("📍 Lugar seleccionado (Clic en mapa):", address);
       } else {
-        console.error('Geocodificación inversa fallida:', status);
+        // Geocodificación inversa fallida - usar dirección genérica
         if (onAddressSelect) {
             onAddressSelect("Ubicación seleccionada (dirección no disponible)");
         }
@@ -152,10 +149,8 @@ const MapComponent = ({ onAddressSelect, origin, destination, currentSelection }
         if (onAddressSelect) {
           onAddressSelect(selectedPlace.formatted_address);
         }
-
-        console.log("📍 Lugar seleccionado:", selectedPlace.formatted_address);
       } else {
-        console.error("El lugar seleccionado no tiene información geográfica.");
+        // El lugar seleccionado no tiene información geográfica - se maneja silenciosamente
       }
     }
   };

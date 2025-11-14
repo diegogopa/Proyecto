@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import colors from '../assets/Colors.jsx'; // Ajusta la ruta si es necesario
+import { useMessage } from '../contexts/MessageContext';
 
 const Container = styled.div`
   max-width: 500px;
@@ -59,6 +60,7 @@ const SubmitButton = styled.button`
 `;
 
 function CreateTrip() {
+  const { showSuccess } = useMessage();
   const [departureTime, setDepartureTime] = useState('');
   const [fromLocation, setFromLocation] = useState('');
   const [toLocation, setToLocation] = useState('');
@@ -75,8 +77,7 @@ function CreateTrip() {
       price,
     };
 
-    console.log('Datos del tramo:', tripData);
-    alert('Tramo creado correctamente 🚗');
+    showSuccess('Tramo creado', 'El tramo ha sido creado correctamente.');
     
     // Limpiar formulario
     setDepartureTime('');

@@ -4,7 +4,8 @@ import styled from 'styled-components';
 import colors from '../../assets/Colors.jsx';
 import MapComponent from '../common/MapComponent.jsx'; 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'; 
-import { faMapMarkerAlt, faRoute, faCarSide, faUserFriends, faGlobe} from '@fortawesome/free-solid-svg-icons'; 
+import { faMapMarkerAlt, faRoute, faCarSide, faUserFriends, faGlobe} from '@fortawesome/free-solid-svg-icons';
+import { useMessage } from '../../contexts/MessageContext'; 
 
 //Estilo para hacer dos contenedores (mapa y formulario)
 const MainContent = styled.div` 
@@ -99,6 +100,7 @@ const BackButton = styled(SubmitButton)`
 
 // Recibe la función de manejo de envío final y una función para cerrar el modal
 function CreateTrip({ onTripSubmit, onClose }) {
+    const { showError } = useMessage();
     
     const [formData, setFormData] = useState({
         fromLocation: '',
@@ -139,7 +141,7 @@ function CreateTrip({ onTripSubmit, onClose }) {
         const { fromLocation, toLocation, departureTime, price, sector, cupos } = formData;
 
         if (!fromLocation || !toLocation || !departureTime || !price || !sector || !cupos) {
-            alert("Por favor, selecciona Origen, Destino y completa todos los campos.");
+            showError("Campos incompletos", "Por favor, selecciona Origen, Destino y completa todos los campos.");
             return;
         }
 

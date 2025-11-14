@@ -120,7 +120,7 @@ function Profile() {
         const res = await axios.get(`https://proyecto-y2t3.vercel.app/api/users/${email}`);
         if (res.data) setUser(res.data);
       } catch (err) {
-        console.error("Error al obtener datos del usuario:", err);
+        // Error silencioso - no es crítico mostrar este error al usuario
       }
     };
 

@@ -7,6 +7,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheckCircle, faUser, faMapMarkerAlt } from '@fortawesome/free-solid-svg-icons'; // Icono de check
 import { useDispatch } from 'react-redux'; // 👈 Importar hook de Redux
 import { createReservation } from "../../components/trips/ReservationSlice.jsx";
+import { useMessage } from '../../contexts/MessageContext';
 
 // --- Estilos para la Reserva ---
 
@@ -187,6 +188,7 @@ const ListoButton = styled(ReserveButton)`
 // Recibe el trip y la función para volver al Home
 function ReserveTrip({ trip, onFinishReservation }) {
     const dispatch = useDispatch(); // 👈 Inicializar el dispatch de Redux
+    const { showError } = useMessage();
     const [step, setStep] = useState('seats'); // 'seats', 'pickup' o 'confirmation'
     const [numberOfSeats, setNumberOfSeats] = useState(1);
     const [pickupAddresses, setPickupAddresses] = useState(['']); // Array de direcciones, una por cada cupo
@@ -216,7 +218,7 @@ function ReserveTrip({ trip, onFinishReservation }) {
 
     const handleSeatsSelected = () => {
         if (numberOfSeats < 1 || numberOfSeats > maxSeats) {
-            alert(`Por favor, selecciona entre 1 y ${maxSeats} cupos.`);
+            showError("Cantidad inválida", `Por favor, selecciona entre 1 y ${maxSeats} cupos.`);
             return;
         }
         setStep('pickup');
@@ -249,14 +251,14 @@ function ReserveTrip({ trip, onFinishReservation }) {
         // Validar que todas las direcciones estén completas
         const incompleteAddresses = pickupAddresses.some(addr => !addr || addr.trim() === '');
         if (incompleteAddresses) {
-            alert("Por favor, completa todas las direcciones de recogida para cada cupo.");
+            showError("Direcciones incompletas", "Por favor, completa todas las direcciones de recogida para cada cupo.");
             return;
         }
 
         // Obtener el tripId (puede ser trip.tripId o trip.id)
         const tripId = trip.tripId || trip.id;
         if (!tripId) {
-            alert("Error: No se encontró el ID del viaje.");
+            showError("Error", "No se encontró el ID del viaje. Por favor, intenta nuevamente.");
             return;
         }
 
@@ -264,7 +266,7 @@ function ReserveTrip({ trip, onFinishReservation }) {
             // Obtener el usuario pasajero para guardar la reserva
             const storedUser = JSON.parse(localStorage.getItem('user'));
             if (!storedUser || !storedUser._id) {
-                alert('No se encontró la sesión del usuario. Inicia sesión nuevamente.');
+                showError("Sesión no encontrada", "No se encontró la sesión del usuario. Inicia sesión nuevamente.");
                 return;
             }
 
@@ -285,19 +287,18 @@ function ReserveTrip({ trip, onFinishReservation }) {
                 const errorData = await response.json();
                 // Mensaje personalizado si está lleno
                 if (errorData.message && errorData.message.includes('cupos')) {
-                    alert(`⚠️ ${errorData.message}`);
+                    showError("Cupos no disponibles", errorData.message);
                 } else {
-                    alert(errorData.message || 'Error al reservar los cupos. Por favor, intenta nuevamente.');
+                    showError("Error al reservar", errorData.message || 'Error al reservar los cupos. Por favor, intenta nuevamente.');
                 }
                 return;
             }
 
             // Si todo salió bien, mostrar confirmación
-            console.log(`Reservando ${numberOfSeats} cupo(s) para viaje #${trip.id}`);
             setStep('confirmation');
         } catch (error) {
-            console.error("Error al reservar:", error);
-            alert("Error al realizar la reserva. Por favor, intenta nuevamente.");
+            // El error ya se maneja arriba con el modal
+            // No necesitamos hacer nada adicional aquí
         }
     };
 

@@ -16,6 +16,7 @@ import iconHome from "../../assets/Home.png";
 import iconReservedTravel from "../../assets/ReservedTravel.png";
 import iconCurrentTravel from "../../assets/CurrentTravel.png";
 import ReservedTravel from '../trips/ApiReserveTravel.jsx'; //Componente para reservar un viaje
+import { useMessage } from '../../contexts/MessageContext';
 
 // --- Estilos de la Página ---
 const HomeContainer = styled.div`
@@ -285,6 +286,7 @@ const timeToMinutes = (timeString) => {
 //Componente principal Home para usuarios Pasajeros
 function Home() {
     const { isDriver } = useDriver(); //Context para verificar si es conductor
+    const { showError, showSuccess, showQuestion } = useMessage(); //Context para mostrar mensajes
     const [userName, setUserName] = useState("Susana"); //Nombre del usuario
     const [menuOpen, setMenuOpen] = useState(false); //Estado del menú desplegable
     const [sector, setSector] = useState(""); //Sector seleccionado para filtrar
@@ -308,7 +310,7 @@ function Home() {
         
         //Verifica si hay cupos disponibles antes de permitir la reserva
         if (cuposNum === 0) {
-            alert("⚠️ Este tramo está lleno. No hay cupos disponibles.");
+            showError("Tramo lleno", "Este tramo está lleno. No hay cupos disponibles.");
             return;
         }
 
@@ -339,7 +341,7 @@ function Home() {
                     setReservations(data.reservations || []);
                 }
             } catch (error) {
-                console.error("Error refreshing reservations:", error);
+                showError("Error al actualizar", "No se pudieron actualizar las reservas. Por favor, intenta nuevamente.");
             }
         };
         refreshReservations();
@@ -369,7 +371,7 @@ function Home() {
                 setAllTrips(data.trips || []);
                 setFilteredTrips(data.trips || []);
             } catch (error) {
-                console.error("Error fetching trips:", error);
+                showError("Error al cargar viajes", "No se pudieron cargar los viajes disponibles. Por favor, intenta nuevamente.");
                 setAllTrips([]);
                 setFilteredTrips([]);
             } finally {
@@ -405,11 +407,11 @@ function Home() {
                     const data = await res.json();
                     setReservations(data.reservations || []);
                 } else {
-                    console.error("Error fetching reservations:", res.status);
+                    showError("Error al cargar reservas", "No se pudieron cargar tus reservas. Por favor, intenta nuevamente.");
                     setReservations([]);
                 }
             } catch (error) {
-                console.error("Error fetching reservations:", error);
+                showError("Error al cargar reservas", "No se pudieron cargar tus reservas. Por favor, intenta nuevamente.");
                 setReservations([]);
             } finally {
                 setIsLoadingReservations(false);
@@ -468,11 +470,11 @@ function Home() {
                     //Toma el viaje más próximo (el primero después de ordenar)
                     setUpcomingTrip(acceptedReservations[0]);
                 } else {
-                    console.error("Error fetching reservations:", res.status);
+                    showError("Error al cargar viaje", "No se pudo cargar el viaje próximo. Por favor, intenta nuevamente.");
                     setUpcomingTrip(null);
                 }
             } catch (error) {
-                console.error("Error fetching upcoming trip:", error);
+                showError("Error al cargar viaje", "No se pudo cargar el viaje próximo. Por favor, intenta nuevamente.");
                 setUpcomingTrip(null);
             } finally {
                 setIsLoadingUpcoming(false);
@@ -491,18 +493,24 @@ function Home() {
         const reservation = reservations.find(r => r._id === reservationId);
         const isRejected = reservation?.status === "Rechazada";
         const confirmMessage = isRejected 
-            ? "¿Estás seguro de que quieres borrar esta reserva rechazada? Los cupos se devolverán al viaje."
+            ? "¿Estás seguro de que quieres borrar esta reserva rechazada?"
             : "¿Estás seguro de que quieres cancelar esta reserva?";
+        const confirmDetails = isRejected
+            ? "Los cupos se devolverán al viaje."
+            : "Esta acción cancelará tu reserva.";
         
-        //Pide confirmación antes de proceder
-        if (!window.confirm(confirmMessage)) {
-            return;
-        }
+        //Pide confirmación antes de proceder usando el modal
+        showQuestion(confirmMessage, confirmDetails, async () => {
+            await proceedWithCancel(reservationId, isRejected);
+        });
+    };
+
+    const proceedWithCancel = async (reservationId, isRejected) => {
 
         try {
             const storedUser = JSON.parse(localStorage.getItem("user"));
             if (!storedUser?._id) {
-                alert("No se encontró la sesión del usuario. Inicia sesión nuevamente.");
+                showError("Sesión no encontrada", "No se encontró la sesión del usuario. Inicia sesión nuevamente.");
                 return;
             }
 
@@ -530,16 +538,18 @@ function Home() {
                     setReservations(data.reservations || []);
                 }
                 const successMessage = isRejected 
-                    ? "Reserva borrada exitosamente. Los cupos han sido devueltos al viaje."
+                    ? "Reserva borrada exitosamente"
                     : "Reserva cancelada exitosamente";
-                alert(successMessage);
+                const successDetails = isRejected
+                    ? "Los cupos han sido devueltos al viaje."
+                    : "Tu reserva ha sido cancelada correctamente.";
+                showSuccess(successMessage, successDetails);
             } else {
                 const errorData = await res.json();
-                alert(errorData.message || "Error al cancelar la reserva. Por favor, intenta nuevamente.");
+                showError("Error al cancelar", errorData.message || "Error al cancelar la reserva. Por favor, intenta nuevamente.");
             }
         } catch (error) {
-            console.error("Error canceling reservation:", error);
-            alert("Error al cancelar la reserva. Por favor, intenta nuevamente.");
+            showError("Error al cancelar", "Error al cancelar la reserva. Por favor, intenta nuevamente.");
         }
     };
 

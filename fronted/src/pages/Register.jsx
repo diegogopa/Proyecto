@@ -146,7 +146,6 @@ const Register = () => {
       setShowModal(true);
 
     } catch (error) {
-      console.error("Error en el registro:", error);
       let errorMessage = 'Intenta nuevamente más tarde.';
       if (error.response) errorMessage = error.response.data?.message || 'Error en el servidor.';
       else if (error.request) errorMessage = 'No se pudo conectar con el servidor.';
