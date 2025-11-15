@@ -56,3 +56,7 @@ La aplicación está diseñada para facilitar el transporte compartido entre mie
 - **Axios** - Cliente HTTP
 - **Font Awesome** - Iconos
 - **Vite** - Build tool
+
+## 🛠️ Creadores
+- **Sara Santacruz Corredor** (320872)
+- **Diego Alejandro Gomez Papagayo** (336260)
