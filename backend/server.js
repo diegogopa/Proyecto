@@ -439,7 +439,11 @@ app.get("/api/trips", async (req, res) => {
               userId: user._id ? user._id.toString() : "",
               tripId: trip._id ? trip._id.toString() : "",
               createdAt: trip.createdAt || new Date(),
-              carPhoto: user.carPhoto ? `https://proyecto5-vs2l.onrender.com${user.carPhoto}` : "", // URL completa de la foto del carro
+              carPhoto: user.carPhoto 
+                ? (user.carPhoto.startsWith('data:image/') 
+                    ? user.carPhoto 
+                    : `https://proyecto5-vs2l.onrender.com${user.carPhoto}`)
+                : "", // URL completa de la foto del carro o base64
             });
           }
         });

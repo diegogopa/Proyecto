@@ -9,6 +9,9 @@ import Button from "../components/common/Button";
 import { useNavigate } from "react-router-dom";
 import AddPhoto from '../components/common/AddPhoto';
 import CarIcon from '../assets/AddPhoto.png';
+import axios from "axios";
+import { useMessage } from '../contexts/MessageContext';
+import API_BASE_URL from "../config/api";
 
 const PageWrapper = styled.div`
   display: flex;
@@ -74,13 +77,71 @@ const ButtonsRow = styled.div`
 
 const CarPhoto = () => {
   const [photo, setPhoto] = useState(null);
+  const [photoFile, setPhotoFile] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { showError, showSuccess } = useMessage();
 
-  const handlePhotoChange = (e) => {
-    const file = e.target.files[0];
+  const handlePhotoSelect = (file) => {
     if (file) {
+      setPhotoFile(file);
       const imageUrl = URL.createObjectURL(file);
       setPhoto(imageUrl);
+    }
+  };
+
+  const handleNext = async () => {
+    try {
+      setIsLoading(true);
+
+      const userEmail = localStorage.getItem("userEmail");
+      if (!userEmail) {
+        showError("Sesión no encontrada", "No se encontró la información del usuario. Por favor, inicia sesión.");
+        navigate("/login");
+        return;
+      }
+
+      // Si hay una foto seleccionada, convertirla a base64 y guardarla
+      if (photoFile) {
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          try {
+            const base64Image = reader.result; // Esto será una URL base64 (data:image/...)
+            
+            // Actualizar el usuario con la foto del carro
+            await axios.put(
+              `${API_BASE_URL}/users/${userEmail}`,
+              { carPhoto: base64Image },
+              { headers: { "Content-Type": "application/json" } }
+            );
+
+            // Actualizar el usuario en localStorage
+            const response = await axios.get(`${API_BASE_URL}/users/${userEmail}`);
+            const user = response.data;
+            localStorage.setItem("user", JSON.stringify(user));
+
+            navigate("/soat-photo");
+          } catch (error) {
+            console.error("Error al guardar la foto:", error);
+            showError("Error al guardar", "No se pudo guardar la foto del carro. Por favor, intenta nuevamente.");
+          } finally {
+            setIsLoading(false);
+          }
+        };
+        reader.onerror = () => {
+          showError("Error", "Error al leer la imagen. Por favor, intenta nuevamente.");
+          setIsLoading(false);
+        };
+        reader.readAsDataURL(photoFile);
+      } else {
+        // Si no hay foto, simplemente navegar a la siguiente página
+        navigate("/soat-photo");
+        setIsLoading(false);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      showError("Error", "Ocurrió un error. Por favor, intenta nuevamente.");
+      setIsLoading(false);
     }
   };
 
@@ -89,11 +150,20 @@ const CarPhoto = () => {
       <Card>
         <Title>¡Agrega una foto de tu carro!</Title>
 
-        <AddPhoto onPhotoSelect={setPhoto} icon={CarIcon} />
+        <AddPhoto onPhotoSelect={handlePhotoSelect} icon={CarIcon} />
 
         <ButtonsRow>
-          <Button text="Anterior" $primary onClick={() => navigate("/register-car")} />
-          <Button text="Siguiente" onClick={() => navigate("/soat-photo")} />
+          <Button 
+            text="Anterior" 
+            $primary 
+            onClick={() => navigate("/register-car")} 
+            disabled={isLoading}
+          />
+          <Button 
+            text={isLoading ? "Guardando..." : "Siguiente"} 
+            onClick={handleNext}
+            disabled={isLoading}
+          />
         </ButtonsRow>
       </Card>
     </PageWrapper>

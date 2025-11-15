@@ -43,6 +43,14 @@ const ImagePlaceholder = styled.div`
     justify-content: center;
     align-items: center;
     border: 1px solid ${colors.details};
+    overflow: hidden;
+`;
+
+const CarImage = styled.img`
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
 `;
 
 const CarIcon = styled(FontAwesomeIcon)`
@@ -100,7 +108,7 @@ const FullMessage = styled.div`
     align-self: flex-end;
 `;
 
-const TripCard = ({ sector, conductor, desde, para, horaSalida, valor, cupos, onReserve }) => {
+const TripCard = ({ sector, conductor, desde, para, horaSalida, valor, cupos, carPhoto, onReserve }) => {
     const cuposNum = typeof cupos === 'string' ? parseInt(cupos) : cupos;
     const isFull = cuposNum === 0;
 
@@ -108,7 +116,11 @@ const TripCard = ({ sector, conductor, desde, para, horaSalida, valor, cupos, on
         <CardContainer>
             <div>
                 <ImagePlaceholder>
-                    <CarIcon icon={faCar} />
+                    {carPhoto ? (
+                        <CarImage src={carPhoto} alt="Foto del vehículo" />
+                    ) : (
+                        <CarIcon icon={faCar} />
+                    )}
                 </ImagePlaceholder>
                 <Title>{sector}</Title>
                 <DetailText>Conductor: {conductor}</DetailText>

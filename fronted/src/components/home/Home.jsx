@@ -670,6 +670,7 @@ return (
                             horaSalida={trip.horaSalida}
                             valor={trip.valor}
                             cupos={trip.cupos}
+                            carPhoto={trip.carPhoto}
                             onReserve={() => handleReserveStart(trip)}
                         />
                         ))}
