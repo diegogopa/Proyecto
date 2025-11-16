@@ -1,11 +1,13 @@
 //Componente principal de la aplicación React.
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import './App.css';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import styled from 'styled-components';
 import { MessageProvider } from './contexts/MessageContext';
+import { setToken, clearUser } from './features/users/UserSlice.jsx';
+import { getToken, getUser } from './utils/storage';
 
 // Importamos las páginas
 import LandingPage from './pages/LandingPage.jsx';
@@ -58,6 +60,33 @@ function Layout({ children }) {
   );
 }
 
+//Componente para sincronizar Redux con sessionStorage
+function AuthSync() {
+  const dispatch = useDispatch();
+  const token = useSelector(selectToken);
+  const location = useLocation();
+
+  // Sincronizar Redux con sessionStorage cuando cambia la ruta
+  useEffect(() => {
+    const sessionToken = getToken();
+    const sessionUser = getUser();
+    
+    // Si hay token en sessionStorage pero no en Redux, actualizar Redux
+    if (sessionToken && !token) {
+      dispatch(setToken(sessionToken));
+    }
+    
+    // Si no hay token ni usuario en sessionStorage, limpiar Redux
+    if (!sessionToken || !sessionUser) {
+      if (token) {
+        dispatch(clearUser());
+      }
+    }
+  }, [location.pathname, token, dispatch]);
+
+  return null;
+}
+
 //Componente principal de la aplicación.
 function App() {
   const token = useSelector(selectToken);
@@ -66,6 +95,7 @@ function App() {
   return (
     <MessageProvider>
       <Router>
+        <AuthSync />
         <Layout>
           <Routes>
           

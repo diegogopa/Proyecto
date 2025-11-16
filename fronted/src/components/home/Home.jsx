@@ -17,6 +17,7 @@ import iconReservedTravel from "../../assets/ReservedTravel.png";
 import iconCurrentTravel from "../../assets/CurrentTravel.png";
 import ReservedTravel from '../trips/ApiReserveTravel.jsx'; //Componente para reservar un viaje
 import { useMessage } from '../../contexts/MessageContext';
+import { getUser } from '../../utils/storage';
 
 // --- Estilos de la Página ---
 const HomeContainer = styled.div`
@@ -287,7 +288,7 @@ const timeToMinutes = (timeString) => {
 function Home() {
     const { isDriver } = useDriver(); //Context para verificar si es conductor
     const { showError, showSuccess, showQuestion } = useMessage(); //Context para mostrar mensajes
-    const [userName, setUserName] = useState("Susana"); //Nombre del usuario
+    const [userName, setUserName] = useState(""); //Nombre del usuario
     const [menuOpen, setMenuOpen] = useState(false); //Estado del menú desplegable
     const [sector, setSector] = useState(""); //Sector seleccionado para filtrar
     const [puestos, setPuestos] = useState(""); //Cantidad de puestos para filtrar
@@ -328,7 +329,7 @@ function Home() {
         //Refresca las reservas para mostrar las actualizadas
         const refreshReservations = async () => {
             try {
-                const storedUser = JSON.parse(localStorage.getItem("user"));
+                const storedUser = getUser();
                 if (!storedUser?._id) return;
 
                 const res = await fetch(`https://proyecto5-vs2l.onrender.com/api/users/${storedUser._id}/reservations`, {
@@ -390,7 +391,7 @@ function Home() {
         const fetchReservations = async () => {
             try {
                 setIsLoadingReservations(true);
-                const storedUser = JSON.parse(localStorage.getItem("user"));
+                const storedUser = getUser();
                 if (!storedUser?._id) {
                     setReservations([]);
                     return;
@@ -429,7 +430,7 @@ function Home() {
         const fetchUpcomingTrip = async () => {
             try {
                 setIsLoadingUpcoming(true);
-                const storedUser = JSON.parse(localStorage.getItem("user"));
+                const storedUser = getUser();
                 if (!storedUser?._id) {
                     setUpcomingTrip(null);
                     setIsLoadingUpcoming(false);
@@ -508,7 +509,7 @@ function Home() {
     const proceedWithCancel = async (reservationId, isRejected) => {
 
         try {
-            const storedUser = JSON.parse(localStorage.getItem("user"));
+            const storedUser = getUser();
             if (!storedUser?._id) {
                 showError("Sesión no encontrada", "No se encontró la sesión del usuario. Inicia sesión nuevamente.");
                 return;
@@ -563,9 +564,9 @@ function Home() {
         setFilteredTrips(filtered);
     };
 
-    //Obtiene el nombre del usuario del localStorage al montar el componente
+    //Obtiene el nombre del usuario del sessionStorage al montar el componente
     useEffect(() => {
-      const storedUser = JSON.parse(localStorage.getItem("user"));
+      const storedUser = getUser();
       if (storedUser && storedUser.nombre) {
           setUserName(`${storedUser.nombre} ${storedUser.apellido || ""}`);
       }

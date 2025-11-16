@@ -89,12 +89,22 @@ function NavigationMenu() {
 
     //Verificación de autenticación
     useEffect(() => {
-        const token = localStorage.getItem('token'); // Obtiene el token del localStorage 
-        setIsLogged(!!token); // Convierte el token a booleano: !!token es true si existe, false si es null/undefined
+        // Verificar token en sessionStorage (específico de esta pestaña)
+        const token = sessionStorage.getItem('token');
+        const user = sessionStorage.getItem('user');
         
-        if (!token && path !== '/') { //Si no hay token, se redirige a login
-            navigate('/');
+        // Si no hay token O usuario, limpiar y redirigir
+        if (!token || !user) {
+            setIsLogged(false);
+            // Solo redirigir si no estamos ya en una ruta pública
+            const publicRoutes = ['/', '/login', '/register', '/add-photoProfile', '/car-question', '/verify-car', '/register-car', '/car-photo', '/soat-photo'];
+            if (!publicRoutes.includes(path)) {
+                navigate('/login');
+            }
+            return;
         }
+        
+        setIsLogged(true);
     }, [path, navigate]); 
 
     //Opciones de la barra de menú

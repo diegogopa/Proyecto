@@ -8,6 +8,7 @@ import logo from "../../assets/Logo.png";
 import profilePhoto from "../../assets/ProfilePhoto.png";
 import { useNavigate } from "react-router-dom";
 import { useMessage } from '../../contexts/MessageContext';
+import { getUser } from '../../utils/storage';
 
 //Contenedor principal de la página
 const PageContainer = styled.div`
@@ -138,7 +139,7 @@ const CurrentTrips = () => {
       try {
         setIsLoading(true);
         //Obtiene el usuario del localStorage
-        const storedUser = JSON.parse(localStorage.getItem("user"));
+        const storedUser = getUser();
         if (!storedUser?._id) {
           setUpcomingTrip(null);
           setIsLoading(false);

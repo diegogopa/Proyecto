@@ -8,6 +8,7 @@ import colors from "../assets/Colors";
 import profilePhoto from "../assets/ProfilePhoto.png";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { getUser, clearSession } from "../utils/storage";
 
 const ProfileContainer = styled.div`
   padding: 40px;
@@ -113,7 +114,7 @@ function Profile() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const storedUser = JSON.parse(localStorage.getItem("user"));
+    const storedUser = getUser();
     if (storedUser) setUser(storedUser);
 
     const fetchUserData = async () => {
@@ -141,7 +142,7 @@ function Profile() {
         <BackButton onClick={() => navigate("/home")}>← Volver</BackButton>
         <LogoutButton
           onClick={() => {
-            localStorage.removeItem("user");
+            clearSession();
             navigate("/login");
           }}
         >

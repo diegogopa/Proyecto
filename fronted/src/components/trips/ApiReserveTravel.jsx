@@ -12,6 +12,7 @@ import { faCheckCircle, faUser, faMapMarkerAlt } from '@fortawesome/free-solid-s
 import { useDispatch } from 'react-redux';
 import { createReservation } from "../../components/trips/ReservationSlice.jsx";
 import { useMessage } from '../../contexts/MessageContext';
+import { getUser } from '../../utils/storage';
 
 //Estilos para la Reserva
 const ReserveContainer = styled.div`
@@ -257,7 +258,7 @@ function ReserveTrip({ trip, onFinishReservation }) {
         }
 
         try {
-            const storedUser = JSON.parse(localStorage.getItem('user'));
+            const storedUser = getUser();
             if (!storedUser || !storedUser._id) {
                 showError("Sesión no encontrada", "No se encontró la sesión del usuario. Inicia sesión nuevamente.");
                 return;

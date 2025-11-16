@@ -11,6 +11,7 @@ import AddPhoto from "../components/common/AddPhoto";
 import CarIcon from "../assets/AddPhoto.png";
 import axios from "axios";
 import { useMessage } from '../contexts/MessageContext';
+import { getUserEmail, setUser, clearSession, removeUserEmail } from '../utils/storage';
 
 const API_BASE_URL = "https://proyecto5-vs2l.onrender.com/api";
 
@@ -86,33 +87,30 @@ const SoatPhoto = () => {
     try {
       setIsLoading(true);
 
-      const userEmail = localStorage.getItem("userEmail");
+      const userEmail = getUserEmail();
       if (!userEmail) {
         showError("Sesión no encontrada", "No se encontró la información del usuario. Por favor, inicia sesión.");
         navigate("/login");
         return;
       }
 
-      localStorage.removeItem("user");
-      localStorage.removeItem("token");
+      clearSession();
 
       const response = await axios.get(`${API_BASE_URL}/users/${userEmail}`);
       const user = response.data;
 
       if (user.email !== userEmail) {
         showError("Error de sesión", "La sesión no coincide. Por favor, inicia sesión nuevamente.");
-        localStorage.removeItem("userEmail");
+        removeUserEmail();
         navigate("/login");
         return;
       }
 
-      localStorage.setItem("user", JSON.stringify(user));
+      setUser(user);
 
       navigate("/home");
     } catch (error) {
-      localStorage.removeItem("user");
-      localStorage.removeItem("userEmail");
-      localStorage.removeItem("token");
+      clearSession();
       showError("Error al cargar", "Error al cargar la información del usuario. Por favor, inicia sesión.");
       navigate("/login");
     } finally {

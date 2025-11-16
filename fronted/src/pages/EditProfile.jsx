@@ -8,6 +8,7 @@ import colors from "../assets/Colors";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useMessage } from '../contexts/MessageContext';
+import { getUser, setUser } from '../utils/storage';
 
 const EditContainer = styled.div`
   padding: 40px;
@@ -99,7 +100,7 @@ function EditProfile() {
   });
 
   useEffect(() => {
-    const storedUser = JSON.parse(localStorage.getItem("user"));
+    const storedUser = getUser();
     if (storedUser) {
       setForm({
         nombre: storedUser.nombre,
@@ -133,7 +134,7 @@ function EditProfile() {
       );
 
       const updatedUser = response.data.user;
-      localStorage.setItem("user", JSON.stringify(updatedUser));
+      setUser(updatedUser);
 
       showSuccess("Perfil actualizado", "Tus datos han sido actualizados correctamente.");
       setTimeout(() => {

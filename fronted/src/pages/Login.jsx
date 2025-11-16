@@ -10,6 +10,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Loader from '../components/common/Loader';
 import FeedbackModal from '../components/common/FeedbackModal';
+import { clearSession, setUser, setUserEmail, setToken } from '../utils/storage';
 
 const API_BASE_URL = "https://proyecto5-vs2l.onrender.com/api"; 
 
@@ -99,11 +100,13 @@ const Login = () => {
         password: password.trim()
       });
 
-      localStorage.removeItem("user");
-      localStorage.removeItem("token");
+      clearSession();
       
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-      localStorage.setItem('userEmail', email.trim());
+      setUser(response.data.user);
+      setUserEmail(email.trim());
+      if (response.data.token) {
+        setToken(response.data.token);
+      }
 
       setModalMessage('¡Bienvenido de vuelta!');
       setModalDetails('Serás redirigido a la página principal.');

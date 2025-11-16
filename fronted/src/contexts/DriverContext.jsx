@@ -3,6 +3,7 @@
 //Incluye: estado de si es conductor o pasajero, función para cambiar el modo y función para obtener el contexto
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { getStorageItem, setStorageItem } from '../utils/storage';
 
 const DriverContext = createContext();
 
@@ -12,12 +13,12 @@ export const useDriver = () => {
 
 export const DriverProvider = ({ children }) => {
   const [isDriver, setIsDriver] = useState(() => {
-    const storedMode = localStorage.getItem('isDriverMode');
+    const storedMode = getStorageItem('isDriverMode');
     return storedMode === 'true';
   });
 
   useEffect(() => {
-    localStorage.setItem('isDriverMode', isDriver);
+    setStorageItem('isDriverMode', isDriver);
   }, [isDriver]);
 
   const toggleDriverMode = () => {

@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import API_BASE_URL from "../config/api";
 import { useMessage } from '../contexts/MessageContext';
+import { getUser, getUserEmail, setUser, clearSession, removeUserEmail } from '../utils/storage';
 
 //Estilos
 const PageWrapper = styled.div`
@@ -63,16 +64,15 @@ const CarQuestion = () => {
     // Verificar si el usuario ya tiene carro registrado al cargar el componente
     const checkUserCar = async () => {
       try {
-        const userEmail = localStorage.getItem("userEmail");
+        const userEmail = getUserEmail();
         if (!userEmail) {
-          // Si no hay email del registro, limpiar localStorage y redirigir a login
-          localStorage.removeItem("user");
-          localStorage.removeItem("token");
+          // Si no hay email del registro, limpiar storage y redirigir a login
+          clearSession();
           navigate("/login");
           return;
         }
 
-        const storedUser = JSON.parse(localStorage.getItem("user") || "null");
+        const storedUser = getUser();
         
         if (storedUser && storedUser.email && storedUser.email === userEmail) {
           if (storedUser.placa && storedUser.placa.trim() !== "") {
@@ -87,18 +87,15 @@ const CarQuestion = () => {
             }
           }
         } else {
-          localStorage.removeItem("user");
-          localStorage.removeItem("token");
+          clearSession();
         }
 
-        // Si no está en localStorage o no coincide, verificar en el backend
+        // Si no está en storage o no coincide, verificar en el backend
         const res = await axios.get(`${API_BASE_URL}/users/${userEmail}`);
         const user = res.data;
 
         if (user.email !== userEmail) {
-          localStorage.removeItem("user");
-          localStorage.removeItem("userEmail");
-          localStorage.removeItem("token");
+          clearSession();
           navigate("/login");
           return;
         }
@@ -109,12 +106,11 @@ const CarQuestion = () => {
                               user.cupos > 0;
 
         if (hasCarComplete) {
-          localStorage.setItem("user", JSON.stringify(user));
+          setUser(user);
           navigate("/home-driver");
         }
       } catch (error) {
-        localStorage.removeItem("user");
-        localStorage.removeItem("token");
+        clearSession();
       }
     };
 
@@ -128,28 +124,27 @@ const CarQuestion = () => {
     }
 
     try {
-      const userEmail = localStorage.getItem("userEmail");
+      const userEmail = getUserEmail();
       if (!userEmail) {
         showError("Sesión no encontrada", "No se encontró la información del usuario. Por favor, inicia sesión.");
         navigate("/login");
         return;
       }
 
-      localStorage.removeItem("user");
-      localStorage.removeItem("token");
+      clearSession();
 
       const res = await axios.get(`${API_BASE_URL}/users/${userEmail}`);
       const user = res.data;
 
       if (user.email !== userEmail) {
         showError("Error de sesión", "La sesión no coincide. Por favor, inicia sesión nuevamente.");
-        localStorage.removeItem("userEmail");
+        removeUserEmail();
         navigate("/login");
         return;
       }
 
-      // Guardar los datos del usuario en localStorage
-      localStorage.setItem("user", JSON.stringify(user));
+      // Guardar los datos del usuario en storage
+      setUser(user);
 
       if (answer === "no") {
         // Si el usuario no quiere registrar un carro, ir directamente al home
@@ -170,9 +165,7 @@ const CarQuestion = () => {
       }
 
     } catch (error) {
-      localStorage.removeItem("user");
-      localStorage.removeItem("userEmail");
-      localStorage.removeItem("token");
+      clearSession();
       showError("Error de verificación", "No se pudo verificar la información del usuario. Por favor, inicia sesión.");
       navigate("/login");
     }

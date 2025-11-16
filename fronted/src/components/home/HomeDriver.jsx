@@ -13,6 +13,7 @@ import iconReservedTravel from "../../assets/ReservedTravel.png";
 import iconCurrentTravel from "../../assets/CurrentTravel.png";
 import CreateTrip from '../trips/CreateTrip.jsx'; //Componente para crear un nuevo viaje
 import { useMessage } from '../../contexts/MessageContext';
+import { getUser, setUser } from '../../utils/storage';
 
 // --- Estilos ---
 const HomeContainer = styled.div`
@@ -278,7 +279,7 @@ function HomeDriver() {
 
   //Obtiene el nombre del usuario del localStorage al montar el componente
   useEffect(() => {
-    const storedUser = JSON.parse(localStorage.getItem("user"));
+    const storedUser = getUser();
     if (storedUser && storedUser.nombre) {
       setUserName(`${storedUser.nombre} ${storedUser.apellido || ""}`);
     }
@@ -287,7 +288,7 @@ function HomeDriver() {
   //Obtiene los viajes creados por el conductor cuando está en las pestañas "reserved" o "current"
   useEffect(() => {
     const fetchUserTrips = async () => {
-      const storedUser = JSON.parse(localStorage.getItem("user"));
+      const storedUser = getUser();
       if (!storedUser?._id) return;
       
       try {
@@ -298,7 +299,7 @@ function HomeDriver() {
           setTrips(data.trips || []);
           //Actualiza localStorage con los viajes del backend
           storedUser.trips = data.trips || [];
-          localStorage.setItem("user", JSON.stringify(storedUser));
+          setUser(storedUser);
         } else {
           //Si falla, usa los del localStorage como fallback
           if (storedUser?.trips) setTrips(storedUser.trips);
@@ -319,7 +320,7 @@ function HomeDriver() {
   //Obtiene las solicitudes pendientes de aprobación cuando está en la pestaña "pending"
   useEffect(() => {
     const fetchPendingRequests = async () => {
-      const storedUser = JSON.parse(localStorage.getItem("user"));
+      const storedUser = getUser();
       if (!storedUser?._id) {
         showError("Usuario no encontrado", "No se encontró el ID del usuario. Por favor, inicia sesión nuevamente.");
         return;
@@ -383,7 +384,7 @@ function HomeDriver() {
   const proceedWithDelete = async (tripId, index) => {
 
     try {
-      const storedUser = JSON.parse(localStorage.getItem("user"));
+      const storedUser = getUser();
       if (!storedUser?._id) {
         showError("Usuario no encontrado", "No se encontró la sesión del usuario. Por favor, inicia sesión nuevamente.");
         return;
@@ -432,13 +433,13 @@ function HomeDriver() {
 
           // Actualizar localStorage
           storedUser.trips = updatedTrips;
-          localStorage.setItem("user", JSON.stringify(storedUser));
+          setUser(storedUser);
         } else {
           // Si falla la recarga, actualizar localmente
           const updatedTrips = trips.filter((trip, i) => i !== index);
           setTrips(updatedTrips);
           storedUser.trips = updatedTrips;
-          localStorage.setItem("user", JSON.stringify(storedUser));
+          setUser(storedUser);
         }
 
         showSuccess("Viaje eliminado", "El viaje ha sido eliminado exitosamente.");
@@ -461,7 +462,7 @@ function HomeDriver() {
 
   //Crea un nuevo viaje desde el componente CreateTrip
   const handleSubmit = async (tripData) => {
-    const storedUser = JSON.parse(localStorage.getItem("user"));
+    const storedUser = getUser();
     if (!storedUser?._id) {
       showError("Usuario no encontrado", "No se encontró la sesión del usuario. Por favor, inicia sesión nuevamente.");
       return;
@@ -499,7 +500,7 @@ function HomeDriver() {
         createdAt: data.createdAt
       };
       updatedUser.trips = [...(storedUser.trips || []), newTripData];
-      localStorage.setItem("user", JSON.stringify(updatedUser));
+      setUser(updatedUser);
       setTrips(updatedUser.trips);
 
       showSuccess("Tramo creado", "El tramo ha sido creado correctamente.");
@@ -513,7 +514,7 @@ function HomeDriver() {
 
   //Acepta o rechaza una solicitud de reserva
   const handleRequestAction = async (reservationId, action) => {
-    const storedUser = JSON.parse(localStorage.getItem("user"));
+    const storedUser = getUser();
     if (!storedUser?._id) {
       showError("Usuario no encontrado", "No se encontró la sesión del usuario. Por favor, inicia sesión nuevamente.");
       return;

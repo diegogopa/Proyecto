@@ -9,6 +9,7 @@ import Button from "../components/common/Button";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import FeedbackModal from "../components/common/FeedbackModal";
+import { clearSession, setUserEmail } from "../utils/storage";
 
 const PageWrapper = styled.div`
   display: flex;
@@ -137,13 +138,12 @@ const Register = () => {
         }
       );
 
-      localStorage.removeItem("user");
-      localStorage.removeItem("token");
+      clearSession();
       
       setModalMessage('Registro exitoso');
       setModalDetails(response.data.message || 'Tu cuenta fue creada correctamente.');
       setModalType('yes');
-      localStorage.setItem("userEmail", formData.email.trim());
+      setUserEmail(formData.email.trim());
       setShowModal(true);
 
     } catch (error) {

@@ -12,6 +12,7 @@ import CarIcon from '../assets/AddPhoto.png';
 import axios from "axios";
 import { useMessage } from '../contexts/MessageContext';
 import API_BASE_URL from "../config/api";
+import { getUserEmail, setUser } from '../utils/storage';
 
 const PageWrapper = styled.div`
   display: flex;
@@ -94,7 +95,7 @@ const CarPhoto = () => {
     try {
       setIsLoading(true);
 
-      const userEmail = localStorage.getItem("userEmail");
+      const userEmail = getUserEmail();
       if (!userEmail) {
         showError("Sesión no encontrada", "No se encontró la información del usuario. Por favor, inicia sesión.");
         navigate("/login");
@@ -115,10 +116,10 @@ const CarPhoto = () => {
               { headers: { "Content-Type": "application/json" } }
             );
 
-            // Actualizar el usuario en localStorage
+            // Actualizar el usuario en storage
             const response = await axios.get(`${API_BASE_URL}/users/${userEmail}`);
             const user = response.data;
-            localStorage.setItem("user", JSON.stringify(user));
+            setUser(user);
 
             navigate("/soat-photo");
           } catch (error) {

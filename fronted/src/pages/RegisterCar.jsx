@@ -11,6 +11,7 @@ import axios from "axios";
 import FeedbackModal from "../components/common/FeedbackModal";
 import API_BASE_URL from "../config/api";
 import { useMessage } from '../contexts/MessageContext';
+import { getUserEmail } from '../utils/storage';
 
 const PageWrapper = styled.div`
   display: flex;
@@ -71,7 +72,7 @@ const RegisterCar = () => {
   const [userEmail, setUserEmail] = useState("");
 
   useEffect(() => {
-    const storedEmail = localStorage.getItem("userEmail");
+    const storedEmail = getUserEmail();
     if (!storedEmail) return navigate("/login");
 
     setUserEmail(storedEmail);
