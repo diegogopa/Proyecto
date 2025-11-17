@@ -9,7 +9,8 @@ import Button from "../components/common/Button";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import FeedbackModal from "../components/common/FeedbackModal";
-import { clearSession, setUserEmail } from "../utils/storage";
+import { setUser, setUserEmail } from "../utils/storage";
+import API_BASE_URL from "../config/api";
 
 const PageWrapper = styled.div`
   display: flex;
@@ -130,7 +131,7 @@ const Register = () => {
       };
 
       const response = await axios.post(
-        "https://proyecto5-vs2l.onrender.com/api/users/register",
+        `${API_BASE_URL}/users/register`,
         newUser,
         { 
           headers: { "Content-Type": "application/json" },
@@ -138,12 +139,23 @@ const Register = () => {
         }
       );
 
-      clearSession();
+      // Obtener el usuario completo del backend después del registro
+      const userEmail = formData.email.trim();
+      try {
+        const userResponse = await axios.get(`${API_BASE_URL}/users/${userEmail}`);
+        const user = userResponse.data;
+        
+        // Guardar el usuario completo y el email en la sesión
+        setUser(user);
+        setUserEmail(userEmail);
+      } catch (error) {
+        // Si no se puede obtener el usuario, al menos guardar el email
+        setUserEmail(userEmail);
+      }
       
       setModalMessage('Registro exitoso');
       setModalDetails(response.data.message || 'Tu cuenta fue creada correctamente.');
       setModalType('yes');
-      setUserEmail(formData.email.trim());
       setShowModal(true);
 
     } catch (error) {

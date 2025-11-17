@@ -64,53 +64,71 @@ const CarQuestion = () => {
     // Verificar si el usuario ya tiene carro registrado al cargar el componente
     const checkUserCar = async () => {
       try {
-        const userEmail = getUserEmail();
-        if (!userEmail) {
-          // Si no hay email del registro, limpiar storage y redirigir a login
-          clearSession();
-          navigate("/login");
-          return;
-        }
-
         const storedUser = getUser();
+        let userEmail = getUserEmail();
         
-        if (storedUser && storedUser.email && storedUser.email === userEmail) {
-          if (storedUser.placa && storedUser.placa.trim() !== "") {
-            const hasCarComplete = storedUser.placa?.trim() &&
-                                   storedUser.marca?.trim() &&
-                                   storedUser.modelo?.trim() &&
-                                   storedUser.cupos > 0;
-            
-            if (hasCarComplete) {
-              navigate("/home-driver");
-              return;
-            }
-          }
-        } else {
-          clearSession();
+        // Si no hay email pero hay usuario en storage, usar el email del usuario
+        if (!userEmail && storedUser && storedUser.email) {
+          userEmail = storedUser.email;
+          setUserEmail(userEmail);
         }
-
-        // Si no está en storage o no coincide, verificar en el backend
-        const res = await axios.get(`${API_BASE_URL}/users/${userEmail}`);
-        const user = res.data;
-
-        if (user.email !== userEmail) {
+        
+        // Si hay usuario en storage, verificar si tiene carro completo
+        if (storedUser && storedUser.email) {
+          const hasCarComplete = storedUser.placa?.trim() &&
+                                storedUser.marca?.trim() &&
+                                storedUser.modelo?.trim() &&
+                                storedUser.cupos > 0;
+          
+          if (hasCarComplete) {
+            navigate("/home-driver");
+            return;
+          }
+          
+          // Si el usuario tiene email, usarlo para verificar en backend si es necesario
+          if (storedUser.email && !userEmail) {
+            userEmail = storedUser.email;
+            setUserEmail(userEmail);
+          }
+        }
+        
+        // Si no hay email ni usuario, redirigir a login
+        if (!userEmail && !storedUser) {
           clearSession();
           navigate("/login");
           return;
         }
+        
+        // Si tenemos email pero no usuario completo, obtenerlo del backend
+        if (userEmail && (!storedUser || storedUser.email !== userEmail)) {
+          const res = await axios.get(`${API_BASE_URL}/users/${userEmail}`);
+          const user = res.data;
 
-        const hasCarComplete = user.placa?.trim() &&
-                              user.marca?.trim() &&
-                              user.modelo?.trim() &&
-                              user.cupos > 0;
+          if (user.email !== userEmail) {
+            clearSession();
+            navigate("/login");
+            return;
+          }
 
-        if (hasCarComplete) {
+          // Guardar el usuario en storage
           setUser(user);
-          navigate("/home-driver");
+
+          const hasCarComplete = user.placa?.trim() &&
+                                user.marca?.trim() &&
+                                user.modelo?.trim() &&
+                                user.cupos > 0;
+
+          if (hasCarComplete) {
+            navigate("/home-driver");
+          }
         }
       } catch (error) {
-        clearSession();
+        // Solo limpiar si es un error de autenticación o usuario no encontrado
+        if (error.response?.status === 404 || error.response?.status === 401) {
+          clearSession();
+          navigate("/login");
+        }
+        // Si es otro error (como de red), no hacer nada y dejar que el usuario continúe
       }
     };
 
@@ -124,27 +142,42 @@ const CarQuestion = () => {
     }
 
     try {
-      const userEmail = getUserEmail();
-      if (!userEmail) {
+      let user = getUser();
+      let userEmail = getUserEmail();
+      
+      // Si no hay email pero hay usuario en storage, usar el email del usuario
+      if (!userEmail && user && user.email) {
+        userEmail = user.email;
+        setUserEmail(userEmail);
+      }
+      
+      // Si no tenemos usuario ni email, intentar obtenerlo del backend
+      if (!user && userEmail) {
+        const res = await axios.get(`${API_BASE_URL}/users/${userEmail}`);
+        user = res.data;
+        setUser(user);
+      }
+      
+      // Si aún no tenemos usuario ni email, mostrar error
+      if (!user && !userEmail) {
         showError("Sesión no encontrada", "No se encontró la información del usuario. Por favor, inicia sesión.");
         navigate("/login");
         return;
       }
-
-      clearSession();
-
-      const res = await axios.get(`${API_BASE_URL}/users/${userEmail}`);
-      const user = res.data;
-
-      if (user.email !== userEmail) {
-        showError("Error de sesión", "La sesión no coincide. Por favor, inicia sesión nuevamente.");
-        removeUserEmail();
-        navigate("/login");
-        return;
+      
+      // Si tenemos usuario pero no coincide el email, verificar en backend
+      if (user && userEmail && user.email !== userEmail) {
+        const res = await axios.get(`${API_BASE_URL}/users/${userEmail}`);
+        user = res.data;
+        setUser(user);
       }
-
-      // Guardar los datos del usuario en storage
-      setUser(user);
+      
+      // Si tenemos email pero no usuario, obtenerlo del backend
+      if (userEmail && (!user || user.email !== userEmail)) {
+        const res = await axios.get(`${API_BASE_URL}/users/${userEmail}`);
+        user = res.data;
+        setUser(user);
+      }
 
       if (answer === "no") {
         // Si el usuario no quiere registrar un carro, ir directamente al home
@@ -165,9 +198,14 @@ const CarQuestion = () => {
       }
 
     } catch (error) {
-      clearSession();
-      showError("Error de verificación", "No se pudo verificar la información del usuario. Por favor, inicia sesión.");
-      navigate("/login");
+      // Solo limpiar la sesión si hay un error real
+      if (error.response?.status === 404 || error.response?.status === 401) {
+        clearSession();
+        showError("Error de verificación", "No se pudo verificar la información del usuario. Por favor, inicia sesión.");
+        navigate("/login");
+      } else {
+        showError("Error de conexión", "No se pudo conectar con el servidor. Por favor, intenta nuevamente.");
+      }
     }
   };
 

@@ -6,7 +6,7 @@ import './App.css';
 import { useSelector, useDispatch } from 'react-redux';
 import styled from 'styled-components';
 import { MessageProvider } from './contexts/MessageContext';
-import { setToken, clearUser } from './features/users/UserSlice.jsx';
+import { setToken, clearUser, setHasCar } from './features/users/UserSlice.jsx';
 import { getToken, getUser } from './utils/storage';
 
 // Importamos las páginas
@@ -74,6 +74,15 @@ function AuthSync() {
     // Si hay token en sessionStorage pero no en Redux, actualizar Redux
     if (sessionToken && !token) {
       dispatch(setToken(sessionToken));
+    }
+    
+    // Si hay usuario en sessionStorage, actualizar hasCar en Redux
+    if (sessionUser) {
+      const hasCarComplete = sessionUser.placa?.trim() &&
+                            sessionUser.marca?.trim() &&
+                            sessionUser.modelo?.trim() &&
+                            sessionUser.cupos > 0;
+      dispatch(setHasCar(hasCarComplete));
     }
     
     // Si no hay token ni usuario en sessionStorage, limpiar Redux

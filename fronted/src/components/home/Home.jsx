@@ -597,8 +597,28 @@ return (
                         alt="Foto de perfil"
                         onClick={() => setMenuOpen(!menuOpen)}
                     />
-                    {/* ✅ Aquí el cambio solicitado */}
-                    <SwitchButton onClick={() => navigate('/car-question')}>
+                    {/* ✅ Cambiar a Conductor: verifica si tiene carro */}
+                    <SwitchButton onClick={async () => {
+                        const storedUser = getUser();
+                        if (storedUser) {
+                            // Verificar si tiene carro completo
+                            const hasCarComplete = storedUser.placa?.trim() &&
+                                                  storedUser.marca?.trim() &&
+                                                  storedUser.modelo?.trim() &&
+                                                  storedUser.cupos > 0;
+                            
+                            if (hasCarComplete) {
+                                // Si tiene carro, ir directamente a home-driver
+                                navigate('/home-driver');
+                            } else {
+                                // Si no tiene carro, ir a car-question para registrarlo
+                                navigate('/car-question');
+                            }
+                        } else {
+                            // Si no hay usuario en storage, ir a car-question
+                            navigate('/car-question');
+                        }
+                    }}>
                         Cambiar a Conductor
                     </SwitchButton>
                     <DropdownMenu open={menuOpen}>

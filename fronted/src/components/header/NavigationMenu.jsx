@@ -49,10 +49,26 @@ function NavigationMenu() {
         setPendingRole(targetRole);
         
         if (targetRole === 'conductor') {
-            if (!hasCar) {
-                // Si no tiene carro
-                setModalType('carError');
-                setShowModal(true);
+            // Verificar si tiene carro desde storage o Redux
+            const userStr = sessionStorage.getItem('user');
+            let userHasCar = hasCar;
+            
+            if (userStr) {
+                try {
+                    const user = JSON.parse(userStr);
+                    const hasCarComplete = user.placa?.trim() &&
+                                         user.marca?.trim() &&
+                                         user.modelo?.trim() &&
+                                         user.cupos > 0;
+                    userHasCar = hasCarComplete;
+                } catch (e) {
+                    // Si hay error parseando, usar el valor de Redux
+                }
+            }
+            
+            if (!userHasCar) {
+                // Si no tiene carro, navegar a car-question para registrarlo
+                navigate('/car-question');
                 return;
             }
         }
@@ -70,7 +86,7 @@ function NavigationMenu() {
             
             if (pendingRole === 'conductor') { 
                 // Si cambió a conductor, va a la página de inicio del conductor
-                navigate('/conductor-home');
+                navigate('/home-driver');
             } else {
                 // Si cambió a pasajero, va a la página de inicio del pasajero
                 navigate('/home');
@@ -78,13 +94,9 @@ function NavigationMenu() {
         }
     };
 
-    //Modal cancelar y ruta al home 
+    //Modal cancelar
     const handleCancel = () => {
         setShowModal(false);
-        
-        if (modalType === 'carError') {
-             navigate('/home'); 
-        }
     };
 
     //Verificación de autenticación
@@ -182,14 +194,6 @@ function NavigationMenu() {
                 />
             )}
 
-            {showModal && modalType === 'carError' && (
-                <FeedbackModal
-                    type="error"
-                    message="No tienes un carro registrado."
-                    details="Debes registrar un carro para cambiar a modo conductor."
-                    onClose={handleCancel}  
-                />
-            )}
         </>
     );
 }

@@ -11,7 +11,9 @@ import axios from "axios";
 import FeedbackModal from "../components/common/FeedbackModal";
 import API_BASE_URL from "../config/api";
 import { useMessage } from '../contexts/MessageContext';
-import { getUserEmail } from '../utils/storage';
+import { getUserEmail, setUser } from '../utils/storage';
+import { useDispatch } from 'react-redux';
+import { setHasCar } from '../features/users/UserSlice';
 
 const PageWrapper = styled.div`
   display: flex;
@@ -68,6 +70,7 @@ const RegisterCar = () => {
   const [modalDetails, setModalDetails] = useState("");
   const [modalType, setModalType] = useState("");
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const [userEmail, setUserEmail] = useState("");
 
@@ -116,6 +119,25 @@ const RegisterCar = () => {
         },
         { headers: { "Content-Type": "application/json" } }
       );
+
+      // Actualizar el usuario en storage con la información del carro
+      try {
+        const userResponse = await axios.get(`${API_BASE_URL}/users/${userEmail}`);
+        const updatedUser = userResponse.data;
+        setUser(updatedUser);
+        
+        // Actualizar hasCar en Redux
+        const hasCarComplete = updatedUser.placa?.trim() &&
+                              updatedUser.marca?.trim() &&
+                              updatedUser.modelo?.trim() &&
+                              updatedUser.cupos > 0;
+        dispatch(setHasCar(hasCarComplete));
+      } catch (err) {
+        // Si no se puede obtener el usuario actualizado, continuar de todas formas
+        console.error("Error al actualizar usuario en storage:", err);
+        // Aún así, actualizar hasCar basado en los datos que acabamos de registrar
+        dispatch(setHasCar(true));
+      }
 
       setModalType("yes");
       setModalMessage("Carro registrado");
